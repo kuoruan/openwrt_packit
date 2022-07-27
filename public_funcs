@@ -3,12 +3,11 @@
 # the default zstd compress level is 3
 export ZSTD_LEVEL=6
 
-get_random_mac ()
-{
+get_random_mac() {
     # MAC地址第一段可在 02 06 0A 0E 中任选一个
-    if [ "$SHELL" == "/bin/bash" ];then
+    if [ "$SHELL" == "/bin/bash" ]; then
         #MACADDR=$(printf "%02X:%02X:%02X:%02X:%02X:%02X\n" $[RANDOM%255] $[RANDOM%255] $[RANDOM%255] $[RANDOM%255] $[RANDOM%255] $[RANDOM%255])
-        MACADDR=$(printf "06:%02X:%02X:%02X:%02X:%02X\n" $[RANDOM%255] $[RANDOM%255] $[RANDOM%255] $[RANDOM%255] $[RANDOM%255])
+        MACADDR=$(printf "06:%02X:%02X:%02X:%02X:%02X\n" $((RANDOM % 255)) $((RANDOM % 255)) $((RANDOM % 255)) $((RANDOM % 255)) $((RANDOM % 255)))
     else
         uuid=$(cat /proc/sys/kernel/random/uuid)
         mac1="0E"
@@ -23,9 +22,9 @@ get_random_mac ()
 }
 
 function check_file() {
-    if [ ! -f "$1" ];then
+    if [ ! -f "$1" ]; then
         echo "文件: [$1] 不存在!"
-        if [ "$2" == "" ];then
+        if [ "$2" == "" ]; then
             exit 1
         else
             sleep $2
@@ -34,9 +33,9 @@ function check_file() {
 }
 
 function check_dir() {
-    if [ ! -d "$1" ];then
+    if [ ! -d "$1" ]; then
         echo "目录: [$1] 不存在!"
-        if [ "$2" == "" ];then
+        if [ "$2" == "" ]; then
             exit 1
         else
             sleep $2
@@ -45,9 +44,9 @@ function check_dir() {
 }
 
 function check_block_dev() {
-    if [ ! -b "$1" ];then
+    if [ ! -b "$1" ]; then
         echo "块设备: [$1] 不存在!"
-        if [ "$2" == "" ];then
+        if [ "$2" == "" ]; then
             exit 1
         else
             sleep $2
@@ -56,13 +55,13 @@ function check_block_dev() {
 }
 
 # 此函数原有的用途是检查内核版本是否 >= 5.10, 现改为检查内核的 text_offset 是否为 0x01080000
-# text offset: 
+# text offset:
 #   0x01080000  适用晶晨盒子厂商 bootloader 以及 主线 bootloader, 已过时
 #   0x00000000  适用主线 bootloader, 但不适用晶晨厂商 bootloader
 function get_k510_from_vmlinuz() {
     local vmlinuz=$1
-    local temp_script=$(mktemp) 
-    cat > $temp_script <<EOF
+    local temp_script=$(mktemp)
+    cat >$temp_script <<EOF
 use strict;
 my \$filename = \$ARGV[0];
 open my \$fh, '<', \$filename or die;
@@ -71,7 +70,7 @@ seek \$fh, 0x8, 0;
 my \$buf = "";
 read \$fh, \$buf, 0x4;
 close(\$fh);
-my \$str = unpack 'H*', \$buf; 
+my \$str = unpack 'H*', \$buf;
 print "\$str\n";
 EOF
     local result=1
@@ -85,9 +84,9 @@ function get_k510_from_boot_tgz() {
     local boot_tgz=$1
     local vmlinuz=$2
     local temp_dir=$(mktemp -d)
-    ( 
-      cd $temp_dir
-      tar xzf "$boot_tgz" "$vmlinuz"
+    (
+        cd $temp_dir
+        tar xzf "$boot_tgz" "$vmlinuz"
     )
     local result=$(get_k510_from_vmlinuz "${temp_dir}/${vmlinuz}")
     rm -rf $temp_dir
@@ -95,69 +94,69 @@ function get_k510_from_boot_tgz() {
 }
 
 function check_depends() {
-    if [ $(id -u) -ne 0 ];then
+    if [ $(id -u) -ne 0 ]; then
         echo "这个脚本需要用root用户来执行，你好象不是root吧？"
         exit 1
     fi
 
-    if mkfs.btrfs -V >/dev/null;then
+    if mkfs.btrfs -V >/dev/null; then
         echo "check mkfs.btrfs ok"
     else
         echo "mkfs.btrfs 程序不存在，请安装 btrfs-progs"
         exit 1
     fi
 
-    if mkfs.vfat --help 1>/dev/nul 2>&1;then
+    if mkfs.vfat --help 1>/dev/nul 2>&1; then
         echo "check mkfs.vfat ok"
     else
         echo "mkfs.vfat 程序不存在，请安装 dosfstools"
         exit 1
     fi
 
-    if gawk --version >/dev/null;then
+    if gawk --version >/dev/null; then
         echo "check gawk ok"
     else
         echo "gawk 程序不存在，请安装 gawk"
         exit 1
     fi
 
-    if uuidgen>/dev/null;then
+    if uuidgen >/dev/null; then
         echo "check uuidgen ok"
     else
         echo "uuidgen 程序不存在，请安装 uuid-runtime"
         exit 1
     fi
 
-    if losetup -V >/dev/null;then
+    if losetup -V >/dev/null; then
         echo "check losetup ok"
     else
         echo "losetup 程序不存在，请安装 mount"
         exit 1
     fi
 
-    lsblk_version=$(lsblk --version|awk '{print $NF}' 2>/dev/null)
-    if [ "$lsblk_version" != "" ];then
+    lsblk_version=$(lsblk --version | awk '{print $NF}' 2>/dev/null)
+    if [ "$lsblk_version" != "" ]; then
         m_v=$(echo ${lsblk_version} | cut -d '.' -f1)
         s_v=$(echo ${lsblk_version} | cut -d '.' -f2)
-        if [ $m_v -gt 2 ] || [ $m_v -eq 2 ] && [ $s_v -ge 33 ];then
+        if [ $m_v -gt 2 ] || [ $m_v -eq 2 ] && [ $s_v -ge 33 ]; then
             echo "check lsblk ok"
         else
             echo "lsblk 需要版本 2.33 或更高的版本, 当前的版本是 $lsblk_version !"
             exit 1
-        fi        
+        fi
     else
         echo "lsblk 程序不存在，请安装 util-linux"
         exit 1
     fi
 
-    if fdisk --version >/dev/null 2>&1;then
+    if fdisk --version >/dev/null 2>&1; then
         echo "check fdisk ok"
     else
         echo "fdisk 程序不存在，请安装 fdisk"
         exit 1
     fi
 
-    if parted --version >/dev/null 2>&1;then
+    if parted --version >/dev/null 2>&1; then
         echo "check parted ok"
     else
         echo "parted 程序不存在，请安装 parted"
@@ -165,8 +164,8 @@ function check_depends() {
     fi
 
     # 创建 kvm 虚拟机镜像需要 qemu-img
-    if [ "$EFI" == "1" ];then
-        if qemu-img --version >/dev/null 2>&1;then
+    if [ "$EFI" == "1" ]; then
+        if qemu-img --version >/dev/null 2>&1; then
             echo "check qemu-img ok"
         else
             echo "qemu-img 程序不存在，请安装 qemu-utils"
@@ -177,7 +176,7 @@ function check_depends() {
 }
 
 function wait_dev() {
-    while [ ! -b $1 ];do
+    while [ ! -b $1 ]; do
         echo "wait for $1 ..."
         sleep 1
     done
@@ -194,7 +193,7 @@ function init_work_env() {
     mkdir -p $TEMP_DIR
     echo "The temporary directory is : [$TEMP_DIR]"
 
-    if [ "$EFI" == "1" ];then
+    if [ "$EFI" == "1" ]; then
         export TGT_BOOT=${TEMP_DIR}/tgt_efi
         echo "The target efi directory is : [$TGT_BOOT]"
     else
@@ -210,7 +209,7 @@ function init_work_env() {
     echo "The output directory is : [$OUTPUT_DIR]"
 
     losetup -D
-    echo 
+    echo
 }
 
 function detach_loopdev() {
@@ -224,19 +223,19 @@ function detach_loopdev() {
 function create_image() {
     local img_name=$1
     local size_mb=$2
-    if [ "$img_name" == "" ];then
+    if [ "$img_name" == "" ]; then
         echo "镜像名称为空，请指定一个具体的镜像名称！"
         exit 1
     fi
 
-    if [ "$size_mb" == "" ];then
+    if [ "$size_mb" == "" ]; then
         echo "镜像大小为空，请指定不小于 1 的整数尺寸！"
         exit 1
     fi
-    
+
     echo "创建空白的目标镜像文件, 大小是 $size_mb MB  ... "
     dd if=/dev/zero of="$img_name" bs=1M count=$size_mb conv=fsync && sync
-    if [ $? -ne 0 ];then
+    if [ $? -ne 0 ]; then
         echo "空白镜像创建失败！"
         exit 1
     else
@@ -245,7 +244,7 @@ function create_image() {
 
     echo -n "设置分区循环设备 ... "
     losetup -f -P "$img_name"
-    if [ $? -ne 0 ];then
+    if [ $? -ne 0 ]; then
         echo "失败！"
         exit 1
     else
@@ -275,39 +274,45 @@ function create_partition() {
     local max_pt_cnt
     local cur_pt_cnt=0
     case ${partition_label} in
-        msdos) max_pt_cnt=4
-               ;;
-          gpt) max_pt_cnt=128
-               ;;
-         auto) local label=$(parted $device_name print 2>/dev/null | gawk '$NF ~ /&msdos$/ || $NF ~ /^gpt$/ || $NF ~ /^unknown$/ {print $NF}')
-               case $label in 
-                   msdos) partition_label="msdos"
-                          max_pt_cnt=4
-                          cur_pt_cnt=$(parted $device_name print | gawk '$1 ~ /^[0-9]+$/ {print $1}' | tail -n1)
-                          [ "$cur_pt_cnt" == "" ] && cur_pt_cnt=0
-                          ;;
-                     gpt) partition_label="gpt"
-                          max_pt_cnt=128
-                          cur_pt_cnt=$(parted $device_name print | gawk '$1 ~ /^[0-9]+$/ {print $1}' | tail -n1)
-                          [ "$cur_pt_cnt" == "" ] && cur_pt_cnt=0
-                          ;;
-                       *) # 自动模式下，如果检测到空白磁盘，将会用msdos格式新建分区表
-                          partition_label="msdos"
-                          max_pt_cnt=4
-                          cur_pt_cnt=0
-                          ;;
-               esac
-               ;;
-            *) echo "未指定分区表类型, 必须为 gpt|msdos|auto"
-               exit 1
-               ;;
+    msdos)
+        max_pt_cnt=4
+        ;;
+    gpt)
+        max_pt_cnt=128
+        ;;
+    auto)
+        local label=$(parted $device_name print 2>/dev/null | gawk '$NF ~ /&msdos$/ || $NF ~ /^gpt$/ || $NF ~ /^unknown$/ {print $NF}')
+        case $label in
+        msdos)
+            partition_label="msdos"
+            max_pt_cnt=4
+            cur_pt_cnt=$(parted $device_name print | gawk '$1 ~ /^[0-9]+$/ {print $1}' | tail -n1)
+            [ "$cur_pt_cnt" == "" ] && cur_pt_cnt=0
+            ;;
+        gpt)
+            partition_label="gpt"
+            max_pt_cnt=128
+            cur_pt_cnt=$(parted $device_name print | gawk '$1 ~ /^[0-9]+$/ {print $1}' | tail -n1)
+            [ "$cur_pt_cnt" == "" ] && cur_pt_cnt=0
+            ;;
+        *) # 自动模式下，如果检测到空白磁盘，将会用msdos格式新建分区表
+            partition_label="msdos"
+            max_pt_cnt=4
+            cur_pt_cnt=0
+            ;;
+        esac
+        ;;
+    *)
+        echo "未指定分区表类型, 必须为 gpt|msdos|auto"
+        exit 1
+        ;;
     esac
 
     echo "对磁盘设备 [$device_name] 进行分区 ..."
-    if [ $cur_pt_cnt -eq 0 ];then
+    if [ $cur_pt_cnt -eq 0 ]; then
         echo -n "创建新的分区表 ... "
         parted -s ${device_name} mklabel ${partition_label} 2>/dev/null
-        if [ $? -ne 0 ];then
+        if [ $? -ne 0 ]; then
             echo "失败!"
             detach_loopdev
             exit 1
@@ -317,7 +322,7 @@ function create_partition() {
     fi
 
     local start=0
-    if [ $cur_pt_cnt -gt 0 ];then
+    if [ $cur_pt_cnt -gt 0 ]; then
         start=$(fdisk -l $device_name | tail -n1 | gawk '{ print ($3 + 1) / 512 * 1024 * 1024 }')
     fi
     i=$((cur_pt_cnt + 1))
@@ -328,29 +333,29 @@ function create_partition() {
         shift
         local pt_type=$1
         shift
-	local pt_idx=$i
-        
-        if [ "$skip_mb" == "" ] || [ "$pt_size" == "" ] || [ "$pt_type" == "" ];then
+        local pt_idx=$i
+
+        if [ "$skip_mb" == "" ] || [ "$pt_size" == "" ] || [ "$pt_type" == "" ]; then
             break
-        fi            
+        fi
 
-	local esp_on=0
-	local lvm_on=0
-	if [ "$pt_type" == "efi" ];then
-	    pt_type="fat32"
-	    esp_on=1
-	elif [ "$pt_type" == "lvm" ];then
-	    pt_type="ext2"
-	    lvm_on=1
-	fi
+        local esp_on=0
+        local lvm_on=0
+        if [ "$pt_type" == "efi" ]; then
+            pt_type="fat32"
+            esp_on=1
+        elif [ "$pt_type" == "lvm" ]; then
+            pt_type="ext2"
+            lvm_on=1
+        fi
 
-        start=$(( skip_mb * 1024 * 1024 + start ))
+        start=$((skip_mb * 1024 * 1024 + start))
 
         local end
-        if [ "${pt_size}" == "-1" ] || [ "${pt_size}" == "100%" ];then
+        if [ "${pt_size}" == "-1" ] || [ "${pt_size}" == "100%" ]; then
             echo -n "创建第 [$i] 个分区, 分区大小: 所有剩余空间, 分区类型: [$pt_type] ... "
             parted -s ${device_name} mkpart primary ${pt_type} ${start}b "100%" 2>/dev/null
-            if [ $? -ne 0 ];then
+            if [ $? -ne 0 ]; then
                 echo "失败!"
                 detach_loopdev
                 exit 1
@@ -359,10 +364,10 @@ function create_partition() {
                 break
             fi
         else
-            end=$(( pt_size * 1024 * 1024 +  start - 1 ))
+            end=$((pt_size * 1024 * 1024 + start - 1))
             echo -n "创建第 [$i] 个分区, 分区大小: [$pt_size] MB, 分区类型: [$pt_type] ... "
             parted -s ${device_name} mkpart primary ${pt_type} ${start}b ${end}b 2>/dev/null
-            if [ $? -ne 0 ];then
+            if [ $? -ne 0 ]; then
                 echo "失败!"
                 detach_loopdev
                 exit 1
@@ -371,13 +376,13 @@ function create_partition() {
             fi
         fi
 
-	if [ "$esp_on" == "1" ];then
+        if [ "$esp_on" == "1" ]; then
             parted -s ${device_name} set $pt_idx esp on
-	elif [ "$lvm_on" == "1" ];then
+        elif [ "$lvm_on" == "1" ]; then
             parted -s ${device_name} set $pt_idx lvm on
         fi
 
-        start=$(( end + 1 ))
+        start=$((end + 1))
         i=$((i + 1))
     done
 
@@ -408,7 +413,7 @@ function make_filesystem() {
     shift
 
     echo "==================================================================="
-    echo "在 [$device_name] 上创建文件系统 ... " 
+    echo "在 [$device_name] 上创建文件系统 ... "
     i=1
     while [ $i -le 4 ]; do
         local fs_use=$1
@@ -417,100 +422,110 @@ function make_filesystem() {
         shift
         local fs_label=$1
         shift
-        if [ "$fs_use" == "" ] || [ "$fs_type" == "" ] || [ "$fs_label" == "" ];then
-             break
+        if [ "$fs_use" == "" ] || [ "$fs_type" == "" ] || [ "$fs_label" == "" ]; then
+            break
         fi
 
         local fs_uuid=$(uuidgen)
         case $fs_use in
-            B) if [ "$fs_type" == "ext4" ] || [ "$fs_type" == "xfs" ] || [ "$fs_type" == "btrfs" ] || [ "$fs_type" == "f2fs" ];then
-                    BOOT_UUID=${fs_uuid}
-                    echo "The boot uuid is ${BOOT_UUID}"
-                    export BOOT_UUID
-               fi
-               BOOT_LABEL=${fs_label}
-               echo "The boot label is ${BOOT_LABEL}"
-               export BOOT_LABEL
-               ;;
-            R) ROOTFS_UUID=${fs_uuid}
-               ROOTFS_LABEL=${fs_label}
-               echo "The rootfs uuid is ${ROOTFS_UUID}"
-               echo "The rootfs label is ${ROOTFS_LABEL}"
-               export ROOTFS_UUID ROOTFS_LABEL
-               ;;
-            O) ;;
-            *) echo "分区用途： [$fs_use] 无法识别！仅支持 B/R/O 三种!"
-               detach_loopdev
-               exit 1
-               ;;
+        B)
+            if [ "$fs_type" == "ext4" ] || [ "$fs_type" == "xfs" ] || [ "$fs_type" == "btrfs" ] || [ "$fs_type" == "f2fs" ]; then
+                BOOT_UUID=${fs_uuid}
+                echo "The boot uuid is ${BOOT_UUID}"
+                export BOOT_UUID
+            fi
+            BOOT_LABEL=${fs_label}
+            echo "The boot label is ${BOOT_LABEL}"
+            export BOOT_LABEL
+            ;;
+        R)
+            ROOTFS_UUID=${fs_uuid}
+            ROOTFS_LABEL=${fs_label}
+            echo "The rootfs uuid is ${ROOTFS_UUID}"
+            echo "The rootfs label is ${ROOTFS_LABEL}"
+            export ROOTFS_UUID ROOTFS_LABEL
+            ;;
+        O) ;;
+        *)
+            echo "分区用途： [$fs_use] 无法识别！仅支持 B/R/O 三种!"
+            detach_loopdev
+            exit 1
+            ;;
         esac
 
         echo "格式化 [${device_name}p${i}], 类型为 [$fs_type], 卷标为 [$fs_label] ... "
         wait_dev ${device_name}p${i}
-        case $fs_type in 
-            fat16) mkfs.vfat -F 16 -n "${fs_label}" ${device_name}p${i}
-                   if [ $? -ne 0 ];then
-                        echo "[${device_name}p${i}] 格式化失败！"
-                        detach_loopdev
-                        exit 1
-                   else
-                        echo "[${device_name}p${i}] 格式化成功"
-                   fi
-                   ;;
-            fat32) mkfs.vfat -F 32 -n "${fs_label}" ${device_name}p${i}
-                   if [ $? -ne 0 ];then
-                        echo "[${device_name}p${i}] 格式化失败！"
-                        detach_loopdev
-                        exit 1
-                   else
-                        echo "[${device_name}p${i}] 格式化成功"
-                   fi
-                   ;;
-             ext4) mkfs.ext4 -U ${fs_uuid} -L "${fs_label}" ${device_name}p${i}
-                   if [ $? -ne 0 ];then
-                        echo "[${device_name}p${i}] 格式化失败！"
-                        detach_loopdev
-                        exit 1
-                   else
-                        echo "[${device_name}p${i}] 格式化成功"
-                   fi
-                   ;;
-              xfs) mkfs.xfs -U ${fs_uuid} -L "${fs_label}" ${device_name}p${i}
-                   if [ $? -ne 0 ];then
-                        echo "[${device_name}p${i}] 格式化失败！"
-                        detach_loopdev
-                        exit 1
-                   else
-                        echo "[${device_name}p${i}] 格式化成功"
-                   fi
-                   ;;
-             f2fs) mkfs.f2fs -U ${fs_uuid} -l "${fs_label}" ${device_name}p${i}
-                   if [ $? -ne 0 ];then
-                        echo "[${device_name}p${i}] 格式化失败！"
-                        detach_loopdev
-                        exit 1
-                   else
-                        echo "[${device_name}p${i}] 格式化成功"
-                   fi
-                   ;;
-            btrfs) mkfs.btrfs -U ${fs_uuid} -L "${fs_label}" -m single ${device_name}p${i}
-                   if [ $? -ne 0 ];then
-                        echo "[${device_name}p${i}] 格式化失败！"
-                        detach_loopdev
-                        exit 1
-                   else
-                        echo "[${device_name}p${i}] 格式化成功"
-                   fi
-                   ;;
-                *) echo "文件系统类型 [$fs_type] 不受支持!"
-                   detach_loopdev
-                   exit 1
-                   ;;
+        case $fs_type in
+        fat16)
+            mkfs.vfat -F 16 -n "${fs_label}" ${device_name}p${i}
+            if [ $? -ne 0 ]; then
+                echo "[${device_name}p${i}] 格式化失败！"
+                detach_loopdev
+                exit 1
+            else
+                echo "[${device_name}p${i}] 格式化成功"
+            fi
+            ;;
+        fat32)
+            mkfs.vfat -F 32 -n "${fs_label}" ${device_name}p${i}
+            if [ $? -ne 0 ]; then
+                echo "[${device_name}p${i}] 格式化失败！"
+                detach_loopdev
+                exit 1
+            else
+                echo "[${device_name}p${i}] 格式化成功"
+            fi
+            ;;
+        ext4)
+            mkfs.ext4 -U ${fs_uuid} -L "${fs_label}" ${device_name}p${i}
+            if [ $? -ne 0 ]; then
+                echo "[${device_name}p${i}] 格式化失败！"
+                detach_loopdev
+                exit 1
+            else
+                echo "[${device_name}p${i}] 格式化成功"
+            fi
+            ;;
+        xfs)
+            mkfs.xfs -U ${fs_uuid} -L "${fs_label}" ${device_name}p${i}
+            if [ $? -ne 0 ]; then
+                echo "[${device_name}p${i}] 格式化失败！"
+                detach_loopdev
+                exit 1
+            else
+                echo "[${device_name}p${i}] 格式化成功"
+            fi
+            ;;
+        f2fs)
+            mkfs.f2fs -U ${fs_uuid} -l "${fs_label}" ${device_name}p${i}
+            if [ $? -ne 0 ]; then
+                echo "[${device_name}p${i}] 格式化失败！"
+                detach_loopdev
+                exit 1
+            else
+                echo "[${device_name}p${i}] 格式化成功"
+            fi
+            ;;
+        btrfs)
+            mkfs.btrfs -U ${fs_uuid} -L "${fs_label}" -m single ${device_name}p${i}
+            if [ $? -ne 0 ]; then
+                echo "[${device_name}p${i}] 格式化失败！"
+                detach_loopdev
+                exit 1
+            else
+                echo "[${device_name}p${i}] 格式化成功"
+            fi
+            ;;
+        *)
+            echo "文件系统类型 [$fs_type] 不受支持!"
+            detach_loopdev
+            exit 1
+            ;;
         esac
 
-        i=$((i+1))
+        i=$((i + 1))
     done
-    echo "[$device_name] 文件系统已创建." 
+    echo "[$device_name] 文件系统已创建."
     echo "==================================================================="
     echo
 }
@@ -523,260 +538,261 @@ function mount_fs() {
     check_dir $mount_point
 
     local fs_type=$3
-    if [ -z "$fs_type" ];then
-         echo "未指定文件系统类型"
-         detach_loopdev
-         exit 1
+    if [ -z "$fs_type" ]; then
+        echo "未指定文件系统类型"
+        detach_loopdev
+        exit 1
     fi
 
     local mount_options=$4
 
     echo -n "挂载 ${device_name} --> ${mount_point} ... "
-    if [ "$mount_options" == "" ];then
+    if [ "$mount_options" == "" ]; then
         mount -t "$fs_type" "$device_name" "$mount_point"
     else
         mount -t "$fs_type" -o "$mount_options" "$device_name" "$mount_point"
     fi
-    if [ $? -ne 0 ];then
-         echo "失败!"
-         detach_loopdev
-         exit 1
+    if [ $? -ne 0 ]; then
+        echo "失败!"
+        detach_loopdev
+        exit 1
     else
-         echo "成功"
+        echo "成功"
     fi
 }
 
 function extract_rootfs_files() {
-   echo -n "释放 Openwrt rootfs 压缩包 ... "
-   (
-       cd ${TGT_ROOT} && \
-          tar --exclude="./lib/firmware/*" --exclude="./lib/modules/*" -xzf "$OPWRT_ROOTFS_GZ" && \
-          mkdir -p .reserved boot rom overlay proc sys run ./etc/modprobe.d ./etc/modules.d.remove && \
-          sync
-   )
-   if [ $? -ne 0 ];then
+    echo -n "释放 Openwrt rootfs 压缩包 ... "
+    (
+        cd ${TGT_ROOT} &&
+            tar --exclude="./lib/firmware/*" --exclude="./lib/modules/*" -xzf "$OPWRT_ROOTFS_GZ" &&
+            mkdir -p .reserved boot rom overlay proc sys run ./etc/modprobe.d ./etc/modules.d.remove &&
+            sync
+    )
+    if [ $? -ne 0 ]; then
         echo "失败！"
         detach_loopdev
         exit 1
-   else 
+    else
         echo "完成"
-   fi
-   echo -n "裁减 Rootfs 中用不到的文件 ... "
-   (
-       cd ${TGT_ROOT}
-       rm -rf ./lib/firmware/* ./lib/modules/*
-       rm -f ./etc/docker-init ./sbin/firstboot ./sbin/jffs2reset ./sbin/jffs2mark
-       # for collectd
-       [ -f ./etc/ppp/options-opkg ] && mv ./etc/ppp/options-opkg ./etc/ppp/options
-       chmod 755 ./etc/init.d/*
-       rm -f ./etc/rc.d/S80nginx 2>/dev/null
-       local ps="${PLATFORM}_${SOC}"
-       case $ps in 
-           amlogic_s905) # s905不支持硬件aes，所以必须删除 ss-rust 程序
-                         [ -f ./usr/bin/sslocal ] && rm -f ./usr/bin/sslocal
-                         [ -f ./usr/bin/ssserver ] && rm -f ./usr/bin/ssserver
-                         ;;
-       esac
-   )
-   echo "完成"
+    fi
+    echo -n "裁减 Rootfs 中用不到的文件 ... "
+    (
+        cd ${TGT_ROOT}
+        rm -rf ./lib/firmware/* ./lib/modules/*
+        rm -f ./etc/docker-init ./sbin/firstboot ./sbin/jffs2reset ./sbin/jffs2mark
+        # for collectd
+        [ -f ./etc/ppp/options-opkg ] && mv ./etc/ppp/options-opkg ./etc/ppp/options
+        chmod 755 ./etc/init.d/*
+        rm -f ./etc/rc.d/S80nginx 2>/dev/null
+        local ps="${PLATFORM}_${SOC}"
+        case $ps in
+        amlogic_s905) # s905不支持硬件aes，所以必须删除 ss-rust 程序
+            [ -f ./usr/bin/sslocal ] && rm -f ./usr/bin/sslocal
+            [ -f ./usr/bin/ssserver ] && rm -f ./usr/bin/ssserver
+            ;;
+        esac
+    )
+    echo "完成"
 
-   echo -n "重新链接 kmod 程序 ... "
-   (  cd $TGT_ROOT/sbin 
-      [ ! -x "kmod" ] && [ -f "${KMOD}" ] && cp "$KMOD" kmod
-      if [ -x "kmod" ];then
-          rm -f depmod insmod lsmod modinfo modprobe rmmod
-          ln -sf kmod depmod
-          ln -sf kmod insmod
-          ln -sf kmod lsmod
-          ln -sf kmod modinfo
-          ln -sf kmod modprobe
-          ln -sf kmod rmmod
-      fi
-   )
-   echo "完成"
+    echo -n "重新链接 kmod 程序 ... "
+    (
+        cd $TGT_ROOT/sbin
+        [ ! -x "kmod" ] && [ -f "${KMOD}" ] && cp "$KMOD" kmod
+        if [ -x "kmod" ]; then
+            rm -f depmod insmod lsmod modinfo modprobe rmmod
+            ln -sf kmod depmod
+            ln -sf kmod insmod
+            ln -sf kmod lsmod
+            ln -sf kmod modinfo
+            ln -sf kmod modprobe
+            ln -sf kmod rmmod
+        fi
+    )
+    echo "完成"
 
-   echo -n "释放 Armbian firmware 压缩包 ... "
-   ( cd ${TGT_ROOT} && tar xJf "$FIRMWARE_TXZ" && sync )
-   if [ $? -ne 0 ];then
+    echo -n "释放 Armbian firmware 压缩包 ... "
+    (cd ${TGT_ROOT} && tar xJf "$FIRMWARE_TXZ" && sync)
+    if [ $? -ne 0 ]; then
         echo "失败！"
         detach_loopdev
         exit 1
-   else 
+    else
         echo "完成"
-   fi
+    fi
 
-   if [ -d "${FMW_HOME}" ];then
-       echo -n "复制 Added firmware 文件 ... "
-       ( cd ${TGT_ROOT} && cp -a ${FMW_HOME}/* lib/firmware/ && sync )
-       echo "完成"
-   fi
+    if [ -d "${FMW_HOME}" ]; then
+        echo -n "复制 Added firmware 文件 ... "
+        (cd ${TGT_ROOT} && cp -a ${FMW_HOME}/* lib/firmware/ && sync)
+        echo "完成"
+    fi
 
-   echo -n "优化 firmware ... "
-   (
-       cd $TGT_ROOT/lib/firmware
-       mv *.hcd brcm/ 2>/dev/null
-       [ -f "$REGULATORY_DB" ] && tar xzf "$REGULATORY_DB"
-       cd brcm
+    echo -n "优化 firmware ... "
+    (
+        cd $TGT_ROOT/lib/firmware
+        mv *.hcd brcm/ 2>/dev/null
+        [ -f "$REGULATORY_DB" ] && tar xzf "$REGULATORY_DB"
+        cd brcm
 
-       # gtking/gtking pro 采用 bcm4356 wifi/bluetooth 模块
-       get_random_mac
-       # wifi5 module AP6356S
-       sed -e "s/macaddr=00:90:4c:1a:10:01/macaddr=${MACADDR}/" "brcmfmac4356-sdio.txt" > "brcmfmac4356-sdio.azw,gtking.txt"
-       get_random_mac
-       # wifi6 module AP6275S
-       sed -e "s/macaddr=00:90:4c:12:d0:01/macaddr=${MACADDR}/" "brcmfmac4375-sdio.txt" > "brcmfmac4375-sdio.azw,gtking.txt"
-       # Phicomm N1 采用 bcm43455 wifi/bluetooth 模块
-       get_random_mac
-       sed -e "s/macaddr=b8:27:eb:74:f2:6c/macaddr=${MACADDR}/" "brcmfmac43455-sdio.txt" > "brcmfmac43455-sdio.phicomm,n1.txt"
-       # MXQ Pro+ 采用 AP6330(bcm4330) wifi/bluetooth 模块
-       get_random_mac
-       sed -e "s/macaddr=00:90:4c:c5:12:38/macaddr=${MACADDR}/" "brcmfmac4330-sdio.txt" > "brcmfmac4330-sdio.crocon,mxq-pro-plus.txt"
-       # HK1 Box 和 H96 Max X3 采用 bcm54339 wifi/bluetooth 模块
-       get_random_mac
-       sed -e "s/macaddr=00:90:4c:c5:12:38/macaddr=${MACADDR}/" "brcmfmac4339-sdio.ZP.txt" > "brcmfmac4339-sdio.amlogic,sm1.txt"
-       # 旧版ugoos x3 采用 bcm43455 wifi/bluetooth 模块
-       get_random_mac
-       sed -e "s/macaddr=b8:27:eb:74:f2:6c/macaddr=${MACADDR}/" "brcmfmac43455-sdio.txt" > "brcmfmac43455-sdio.amlogic,sm1.txt"
-       # 新版ugoos x3 采用 brm43456
-       get_random_mac
-       sed -e "s/macaddr=b8:27:eb:74:f2:6c/macaddr=${MACADDR}/" "brcmfmac43456-sdio.txt" > "brcmfmac43456-sdio.amlogic,sm1.txt"
-       # V5.1版 x96max plus 采用 AM7256 (brcm4354)
-       get_random_mac
-       sed -e "s/macaddr=00:90:4c:00:43:54/macaddr=${MACADDR}/" "brcmfmac4354-sdio.txt" > "brcmfmac4354-sdio.amlogic,sm1.txt"
-   )
-   echo "完成"
+        # gtking/gtking pro 采用 bcm4356 wifi/bluetooth 模块
+        get_random_mac
+        # wifi5 module AP6356S
+        sed -e "s/macaddr=00:90:4c:1a:10:01/macaddr=${MACADDR}/" "brcmfmac4356-sdio.txt" >"brcmfmac4356-sdio.azw,gtking.txt"
+        get_random_mac
+        # wifi6 module AP6275S
+        sed -e "s/macaddr=00:90:4c:12:d0:01/macaddr=${MACADDR}/" "brcmfmac4375-sdio.txt" >"brcmfmac4375-sdio.azw,gtking.txt"
+        # Phicomm N1 采用 bcm43455 wifi/bluetooth 模块
+        get_random_mac
+        sed -e "s/macaddr=b8:27:eb:74:f2:6c/macaddr=${MACADDR}/" "brcmfmac43455-sdio.txt" >"brcmfmac43455-sdio.phicomm,n1.txt"
+        # MXQ Pro+ 采用 AP6330(bcm4330) wifi/bluetooth 模块
+        get_random_mac
+        sed -e "s/macaddr=00:90:4c:c5:12:38/macaddr=${MACADDR}/" "brcmfmac4330-sdio.txt" >"brcmfmac4330-sdio.crocon,mxq-pro-plus.txt"
+        # HK1 Box 和 H96 Max X3 采用 bcm54339 wifi/bluetooth 模块
+        get_random_mac
+        sed -e "s/macaddr=00:90:4c:c5:12:38/macaddr=${MACADDR}/" "brcmfmac4339-sdio.ZP.txt" >"brcmfmac4339-sdio.amlogic,sm1.txt"
+        # 旧版ugoos x3 采用 bcm43455 wifi/bluetooth 模块
+        get_random_mac
+        sed -e "s/macaddr=b8:27:eb:74:f2:6c/macaddr=${MACADDR}/" "brcmfmac43455-sdio.txt" >"brcmfmac43455-sdio.amlogic,sm1.txt"
+        # 新版ugoos x3 采用 brm43456
+        get_random_mac
+        sed -e "s/macaddr=b8:27:eb:74:f2:6c/macaddr=${MACADDR}/" "brcmfmac43456-sdio.txt" >"brcmfmac43456-sdio.amlogic,sm1.txt"
+        # V5.1版 x96max plus 采用 AM7256 (brcm4354)
+        get_random_mac
+        sed -e "s/macaddr=00:90:4c:00:43:54/macaddr=${MACADDR}/" "brcmfmac4354-sdio.txt" >"brcmfmac4354-sdio.amlogic,sm1.txt"
+    )
+    echo "完成"
 
-   echo -n "释放 Kernel modules 压缩包 ... "
-   ( 
-      cd ${TGT_ROOT} && \
-          mkdir -p lib/modules && \
-          cd lib/modules && \
-              tar xzf ${MODULES_TGZ} && \
-              cd ${KERNEL_VERSION}/ && \
-                  find . -name '*.ko' -exec ln -sf {} . \; && \
-                  rm -f "build" "source" "ntfs.ko" && \
-          sync
-   )
-   if [ $? -ne 0 ];then
+    echo -n "释放 Kernel modules 压缩包 ... "
+    (
+        cd ${TGT_ROOT} &&
+            mkdir -p lib/modules &&
+            cd lib/modules &&
+            tar xzf ${MODULES_TGZ} &&
+            cd ${KERNEL_VERSION}/ &&
+            find . -name '*.ko' -exec ln -sf {} . \; &&
+            rm -f "build" "source" "ntfs.ko" &&
+            sync
+    )
+    if [ $? -ne 0 ]; then
         echo "失败！"
         detach_loopdev
         exit 1
-   else 
+    else
         echo "完成"
-   fi
+    fi
 
-   if [ -n "$MODEL_DB" ] && [ -f "$MODEL_DB" ];then
-       echo "复制硬件机型数据库 ..."
-       cp -v "$MODEL_DB" ${TGT_ROOT}/etc/model_database.txt
-       echo "完成"
-   fi 
+    if [ -n "$MODEL_DB" ] && [ -f "$MODEL_DB" ]; then
+        echo "复制硬件机型数据库 ..."
+        cp -v "$MODEL_DB" ${TGT_ROOT}/etc/model_database.txt
+        echo "完成"
+    fi
 }
 
 function extract_amlogic_boot_files() {
     echo -n "释放 Kernel zImage、uInitrd 及 dtbs 压缩包 ... "
-    ( 
-        cd ${TGT_BOOT} && \
-            cp "${BOOTFILES_HOME}"/* . && \
-            tar xzf "${BOOT_TGZ}" && \
-            rm -f initrd.img-${KERNEL_VERSION} && \
-            cp vmlinuz-${KERNEL_VERSION} zImage && \
-            cp uInitrd-${KERNEL_VERSION} uInitrd && \
-            cp ${UBOOT_WITHOUT_FIP_HOME}/* . && \
-            mkdir -p dtb/amlogic && \
-            cd dtb/amlogic && \
-            tar xzf "${DTBS_TGZ}" && \
+    (
+        cd ${TGT_BOOT} &&
+            cp "${BOOTFILES_HOME}"/* . &&
+            tar xzf "${BOOT_TGZ}" &&
+            rm -f initrd.img-${KERNEL_VERSION} &&
+            cp vmlinuz-${KERNEL_VERSION} zImage &&
+            cp uInitrd-${KERNEL_VERSION} uInitrd &&
+            cp ${UBOOT_WITHOUT_FIP_HOME}/* . &&
+            mkdir -p dtb/amlogic &&
+            cd dtb/amlogic &&
+            tar xzf "${DTBS_TGZ}" &&
             sync
     )
-    if [ $? -ne 0 ];then
-         echo "失败！"
-         detach_loopdev
-         exit 1
+    if [ $? -ne 0 ]; then
+        echo "失败！"
+        detach_loopdev
+        exit 1
     fi
-    ( 
+    (
         cd ${TGT_BOOT}
         # 5.4内核不再需要u-boot.sd 以及 u-boot.usb
         rm -f u-boot.usb u-boot.sd
         # 5.10以后的内核，需要增加u-boot重载
         # 5.4内核可加可不加
-        if [ $K510 -eq 1 ];then
+        if [ $K510 -eq 1 ]; then
             check_file ${UBOOT_WITHOUT_FIP}
             cp -f ${UBOOT_WITHOUT_FIP} u-boot.ext
-            if [ $? -ne 0 ];then
+            if [ $? -ne 0 ]; then
                 echo "失败！"
                 detach_loopdev
                 exit 1
             fi
         fi
-    ) 
+    )
     echo "完成"
 }
 
 function extract_rockchip_boot_files() {
     echo -n "释放 Kernel zImage、uInitrd 及 dtbs 压缩包 ... "
-    ( 
-          cd ${TGT_BOOT} && \
-              cp "${BOOTFILES_HOME}"/* . && \
-              tar xzf "${BOOT_TGZ}" && \
-              rm -f initrd.img-${KERNEL_VERSION} && \
-              ln -sf vmlinuz-${KERNEL_VERSION} Image && \
-              ln -sf uInitrd-${KERNEL_VERSION} uInitrd && \
-              mkdir -p dtb-${KERNEL_VERSION}/rockchip && \
-              ln -sf dtb-${KERNEL_VERSION} dtb && \
-              cd dtb/rockchip && \
-              tar xzf "${DTBS_TGZ}" && \
-              sync
+    (
+        cd ${TGT_BOOT} &&
+            cp "${BOOTFILES_HOME}"/* . &&
+            tar xzf "${BOOT_TGZ}" &&
+            rm -f initrd.img-${KERNEL_VERSION} &&
+            ln -sf vmlinuz-${KERNEL_VERSION} Image &&
+            ln -sf uInitrd-${KERNEL_VERSION} uInitrd &&
+            mkdir -p dtb-${KERNEL_VERSION}/rockchip &&
+            ln -sf dtb-${KERNEL_VERSION} dtb &&
+            cd dtb/rockchip &&
+            tar xzf "${DTBS_TGZ}" &&
+            sync
     )
-    if [ $? -ne 0 ];then
+    if [ $? -ne 0 ]; then
         echo "失败！"
         detach_loopdev
         exit 1
-    else 
+    else
         echo "完成"
     fi
 }
 
 function extract_allwinner_boot_files() {
     echo -n "释放 Kernel zImage、uInitrd 及 dtbs 压缩包 ... "
-    ( 
-        cd ${TGT_BOOT} && \
-            cp "${BOOTFILES_HOME}"/* . && \
-            tar xzf "${BOOT_TGZ}" && \
-            rm -f initrd.img-${KERNEL_VERSION} && \
-            cp vmlinuz-${KERNEL_VERSION} zImage && \
-            cp uInitrd-${KERNEL_VERSION} uInitrd && \
-            mkdir -p dtb/allwinner && \
-            cd dtb/allwinner && \
-            tar xzf "${DTBS_TGZ}" && \
+    (
+        cd ${TGT_BOOT} &&
+            cp "${BOOTFILES_HOME}"/* . &&
+            tar xzf "${BOOT_TGZ}" &&
+            rm -f initrd.img-${KERNEL_VERSION} &&
+            cp vmlinuz-${KERNEL_VERSION} zImage &&
+            cp uInitrd-${KERNEL_VERSION} uInitrd &&
+            mkdir -p dtb/allwinner &&
+            cd dtb/allwinner &&
+            tar xzf "${DTBS_TGZ}" &&
             sync
     )
-    if [ $? -ne 0 ];then
+    if [ $? -ne 0 ]; then
         echo "失败！"
         detach_loopdev
         exit 1
-    else 
+    else
         echo "完成"
     fi
 }
 
 function extract_qemu-aarch64_boot_files() {
     echo -n "释放 Kernel vmlinuz、initrd.img 及 grub2 压缩包 ... "
-    ( 
-        cd ${TGT_ROOT}/boot && \
-	    mkdir -p efi && \
-	    tar xzf "${BOOTFILES_HOME}/grub2.tar.gz" && \
-            tar xzf "${BOOT_TGZ}" && \
-            ln -s initrd.img-${KERNEL_VERSION} initrd.img && \
-	    ln -s vmlinuz-${KERNEL_VERSION} vmlinuz && \
-            rm -f uInitrd* && \
-        cd ${TGT_BOOT} && \
-	    tar xzf "${BOOTFILES_HOME}/EFI.tar.gz" && \
-	    sync
+    (
+        cd ${TGT_ROOT}/boot &&
+            mkdir -p efi &&
+            tar xzf "${BOOTFILES_HOME}/grub2.tar.gz" &&
+            tar xzf "${BOOT_TGZ}" &&
+            ln -s initrd.img-${KERNEL_VERSION} initrd.img &&
+            ln -s vmlinuz-${KERNEL_VERSION} vmlinuz &&
+            rm -f uInitrd* &&
+            cd ${TGT_BOOT} &&
+            tar xzf "${BOOTFILES_HOME}/EFI.tar.gz" &&
+            sync
     )
-    if [ $? -ne 0 ];then
+    if [ $? -ne 0 ]; then
         echo "失败！"
         detach_loopdev
         exit 1
-    else 
+    else
         echo "完成"
     fi
 }
@@ -786,27 +802,27 @@ function create_fstab_config() {
     echo "创建 fstab 配置文件 ... "
     (
         cd $TGT_ROOT
-	if [ "$PLATFORM" == "qemu-aarch64" ];then
-            cat > ./etc/fstab <<EOF
+        if [ "$PLATFORM" == "qemu-aarch64" ]; then
+            cat >./etc/fstab <<EOF
 UUID=${ROOTFS_UUID} / btrfs compress=zstd:${ZSTD_LEVEL} 0 1
 LABEL=${BOOT_LABEL} /boot/efi vfat noatime,errors=remount-ro 0 2
 #tmpfs /tmp tmpfs defaults,nosuid 0 0
 EOF
-        elif [ ! -z "${BOOT_UUID}" ];then
-            cat > ./etc/fstab <<EOF
+        elif [ ! -z "${BOOT_UUID}" ]; then
+            cat >./etc/fstab <<EOF
 UUID=${ROOTFS_UUID} / btrfs compress=zstd:${ZSTD_LEVEL} 0 1
 UUID=${BOOT_UUID} /boot ext4 noatime,errors=remount-ro 0 2
 #tmpfs /tmp tmpfs defaults,nosuid 0 0
 EOF
-        else 
-            cat > ./etc/fstab <<EOF
+        else
+            cat >./etc/fstab <<EOF
 UUID=${ROOTFS_UUID} / btrfs compress=zstd:${ZSTD_LEVEL} 0 1
 LABEL=${BOOT_LABEL} /boot vfat defaults 0 2
 #tmpfs /tmp tmpfs defaults,nosuid 0 0
 EOF
         fi
 
-        cat > ./etc/config/fstab <<EOF
+        cat >./etc/config/fstab <<EOF
 config global
         option anon_swap '0'
         option auto_swap '0'
@@ -825,35 +841,35 @@ config mount
 
 EOF
 
-        if [ "$PLATFORM" == "qemu-aarch64" ];then
-            cat >> ./etc/config/fstab <<EOF
+        if [ "$PLATFORM" == "qemu-aarch64" ]; then
+            cat >>./etc/config/fstab <<EOF
 config mount
         option target '/boot/efi'
         option enabled '1'
         option enabled_fsck '1'
 EOF
         else
-            cat >> ./etc/config/fstab <<EOF
+            cat >>./etc/config/fstab <<EOF
 config mount
         option target '/boot'
         option enabled '1'
         option enabled_fsck '1'
 EOF
-	fi
+        fi
 
-        if [ "$PLATFORM" == "qemu-aarch64" ];then
-            cat >> ./etc/config/fstab <<EOF
+        if [ "$PLATFORM" == "qemu-aarch64" ]; then
+            cat >>./etc/config/fstab <<EOF
         option label '${BOOT_LABEL}'
         option fstype 'vfat'
 EOF
-        elif [ ! -z "${BOOT_UUID}" ];then
-            cat >> ./etc/config/fstab <<EOF
+        elif [ ! -z "${BOOT_UUID}" ]; then
+            cat >>./etc/config/fstab <<EOF
         option uuid '${BOOT_UUID}'
         option fstype 'ext4'
 
 EOF
         else
-            cat >> ./etc/config/fstab <<EOF
+            cat >>./etc/config/fstab <<EOF
         option label '${BOOT_LABEL}'
         option fstype 'vfat'
 
@@ -870,11 +886,11 @@ EOF
 # 调整ntfs相关配置
 function adjust_ntfs_config() {
     echo -n "调整 ntfs 配置 ... "
-    ( 
+    (
         cd $TGT_ROOT/sbin
-        if ls ../usr/lib/opkg/info/ntfs3* >/dev/null 2>&1;then
-            rm -f mount.ntfs* 
-            cat > mount.ntfs <<EOF
+        if ls ../usr/lib/opkg/info/ntfs3* >/dev/null 2>&1; then
+            rm -f mount.ntfs*
+            cat >mount.ntfs <<EOF
 #!/bin/sh
 
 function check_k515() {
@@ -906,7 +922,7 @@ fi
 EOF
             chmod 755 mount.ntfs
             echo "发现 ntfs3, 调整完成"
-        elif ls ../usr/lib/opkg/info/ntfs-3g* >/dev/null 2>&1;then
+        elif ls ../usr/lib/opkg/info/ntfs-3g* >/dev/null 2>&1; then
             ln -sf /usr/bin/ntfs-3g mount.ntfs
             echo "发现 ntfs-3g, 调整完成"
         else
@@ -918,14 +934,14 @@ EOF
 # 调整 turboacc 相关配置
 function adjust_turboacc_config() {
     echo -n "调整 turboacc 配置 ... "
-    ( 
+    (
         cd $TGT_ROOT
-        if [ -f ./etc/config/turboacc ];then
+        if [ -f ./etc/config/turboacc ]; then
             sed -e "s/option sw_flow '1'/option sw_flow '${SW_FLOWOFFLOAD}'/" -i ./etc/config/turboacc
             sed -e "s/option hw_flow '1'/option hw_flow '${HW_FLOWOFFLOAD}'/" -i ./etc/config/turboacc
             sed -e "s/option sfe_flow '1'/option sfe_flow '${SFE_FLOW}'/" -i ./etc/config/turboacc
         else
-            cat > ./etc/config/turboacc <<EOF
+            cat >./etc/config/turboacc <<EOF
 
 config turboacc 'config'
         option sw_flow '${SW_FLOWOFFLOAD}'
@@ -944,29 +960,29 @@ EOF
 # CPU状态补丁
 function patch_admin_status_index_html() {
     echo "打补丁：[状态页面相关信息补丁] ... "
-    if [ "$PLATFORM" == "qemu-aarch64" ];then
-	(
-	   cd $TGT_ROOT/usr/lib/lua/luci/view/admin_status/ && \
-		   sed -e 's/pcdata(boardinfo.model or "?")/pcdata(boardinfo.model or "KVM Virtual Machine")/' -i index.htm
+    if [ "$PLATFORM" == "qemu-aarch64" ]; then
+        (
+            cd $TGT_ROOT/usr/lib/lua/luci/view/admin_status/ &&
+                sed -e 's/pcdata(boardinfo.model or "?")/pcdata(boardinfo.model or "KVM Virtual Machine")/' -i index.htm
         )
     else
-	(
+        (
             cd $TGT_ROOT
-            if [ ! -f usr/bin/perl ];then
-                 echo "未发现 perl 实用程序, 放弃补丁!"
-            else 
-                if [ -f "$CPUSTAT_PATCH" ];then 
-                     patch -p1 < ${CPUSTAT_PATCH} 
-                     if [ $? -ne 0 ];then
-                         echo "补丁失败!"
-                     else
-                         if [ -f "${CPUSTAT_PATCH_02}" ] ;then
-                             patch -p1 < ${CPUSTAT_PATCH_02}
-                             if [ $? -ne 0 ];then
+            if [ ! -f usr/bin/perl ]; then
+                echo "未发现 perl 实用程序, 放弃补丁!"
+            else
+                if [ -f "$CPUSTAT_PATCH" ]; then
+                    patch -p1 <${CPUSTAT_PATCH}
+                    if [ $? -ne 0 ]; then
+                        echo "补丁失败!"
+                    else
+                        if [ -f "${CPUSTAT_PATCH_02}" ]; then
+                            patch -p1 <${CPUSTAT_PATCH_02}
+                            if [ $? -ne 0 ]; then
                                 echo "补丁失败!"
-                             fi
-                         fi
-                     fi
+                            fi
+                        fi
+                    fi
                 fi
                 echo "完成"
             fi
@@ -982,7 +998,7 @@ function write_release_info() {
         cd $TGT_ROOT
 
         # 写入版本信息
-        cat > ./etc/flippy-openwrt-release <<EOF
+        cat >./etc/flippy-openwrt-release <<EOF
 PLATFORM=${PLATFORM}
 SOC=${SOC}
 BOARD=${BOARD}
@@ -990,9 +1006,9 @@ KERNEL_VERSION=${KERNEL_VERSION}
 K510=${K510}
 EOF
 
-        if [ -f "./etc/uci-defaults/99-default-settings" ] && [ -n "${DISTRIB_REVISION}" ] && [ -n "${DISTRIB_DESCRIPTION}" ];then
+        if [ -f "./etc/uci-defaults/99-default-settings" ] && [ -n "${DISTRIB_REVISION}" ] && [ -n "${DISTRIB_DESCRIPTION}" ]; then
             sed -e "/exit 0/d" -i ./etc/uci-defaults/99-default-settings
-	    cat >> ./etc/uci-defaults/99-default-settings <<EOF
+            cat >>./etc/uci-defaults/99-default-settings <<EOF
 sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
 echo "DISTRIB_REVISION='${DISTRIB_REVISION}'" >> /etc/openwrt_release
 sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
@@ -1002,14 +1018,14 @@ exit 0
 EOF
         fi
 
-        if [ "$PLATFORM" == "amlogic" ] && [ -n "$UBOOT_WITHOUT_FIP" ];then
-            cat >> ./etc/flippy-openwrt-release <<EOF
+        if [ "$PLATFORM" == "amlogic" ] && [ -n "$UBOOT_WITHOUT_FIP" ]; then
+            cat >>./etc/flippy-openwrt-release <<EOF
 UBOOT_OVERLOAD=${UBOOT_WITHOUT_FIP}
 EOF
         fi
     )
     cat $TGT_ROOT/etc/flippy-openwrt-release
-    echo 
+    echo
 }
 
 # 写入 banner 信息
@@ -1017,18 +1033,18 @@ function write_banner() {
     echo "写入 banner 信息 ... "
     (
         cd $TGT_ROOT
-        if [ -f $BANNER ];then
+        if [ -f $BANNER ]; then
             cp -f $BANNER ./etc/banner
-            echo " Base on OpenWrt ${OPENWRT_VER} by lean & lienol" >> etc/banner
-            echo " Kernel ${KERNEL_VERSION}" >> etc/banner
+            echo " Base on OpenWrt ${OPENWRT_VER}" >>etc/banner
+            echo " Kernel ${KERNEL_VERSION}" >>etc/banner
             TODAY=$(date +%Y-%m-%d)
-            echo " Packaged by ${WHOAMI} on ${TODAY}" >> etc/banner
-            echo " PLATFORM: ${PLATFORM}  SOC: ${SOC}  BOARD: ${BOARD}" >> etc/banner
-            echo >> etc/banner
+            echo " Packaged by ${WHOAMI} on ${TODAY}" >>etc/banner
+            echo " PLATFORM: ${PLATFORM}  SOC: ${SOC}  BOARD: ${BOARD}" >>etc/banner
+            echo >>etc/banner
         fi
     )
     cat $TGT_ROOT/etc/banner
-    echo 
+    echo
 }
 
 # 复制增补文件
@@ -1038,56 +1054,56 @@ function copy_supplement_files() {
     (
         cd $TGT_ROOT
         [ -n "$DAEMON_JSON" ] && [ -f $DAEMON_JSON ] && mkdir -p "etc/docker" && cp -v $DAEMON_JSON "./etc/docker/daemon.json"
-        [ -n "$COREMARK" ] && [ -f $COREMARK ] && [ -f "etc/coremark.sh" ] && \
-              cp -fv $COREMARK "./etc/coremark.sh" && chmod 755 "etc/coremark.sh" && \
-              rm -f ./etc/bench.log && \
-              echo "17 3 * * * /etc/coremark.sh" >> ./etc/crontabs/root
+        [ -n "$COREMARK" ] && [ -f $COREMARK ] && [ -f "etc/coremark.sh" ] &&
+            cp -fv $COREMARK "./etc/coremark.sh" && chmod 755 "etc/coremark.sh" &&
+            rm -f ./etc/bench.log &&
+            echo "17 3 * * * /etc/coremark.sh" >>./etc/crontabs/root
 
         #[ -n "$TTYD" ] && [ -f $TTYD ] && cp -v $TTYD etc/init.d/
 
         [ -n "$FLIPPY" ] && [ -f $FLIPPY ] && cp -v $FLIPPY ./usr/sbin/
-        [ -n "$OPENWRT_INSTALL" ] && [ -f ${OPENWRT_INSTALL} ] && cp -v ${OPENWRT_INSTALL} ./usr/sbin/ && \
-              (cd root && ln -s ../usr/sbin/openwrt-install-amlogic ./install-to-emmc.sh)
+        [ -n "$OPENWRT_INSTALL" ] && [ -f ${OPENWRT_INSTALL} ] && cp -v ${OPENWRT_INSTALL} ./usr/sbin/ &&
+            (cd root && ln -s ../usr/sbin/openwrt-install-amlogic ./install-to-emmc.sh)
         [ -n "$OPENWRT_KERNEL" ] && [ -f ${OPENWRT_KERNEL} ] && cp -v ${OPENWRT_KERNEL} ./usr/sbin/
         [ -n "$OPENWRT_BACKUP" ] && [ -f ${OPENWRT_BACKUP} ] && cp -v ${OPENWRT_BACKUP} ./usr/sbin/ && (cd usr/sbin && ln -sfv openwrt-backup flippy)
         [ -n "$OPENWRT_UPDATE" ] && [ -f ${OPENWRT_UPDATE} ] && cp -v ${OPENWRT_UPDATE} ./usr/sbin/
-	[ -n "${DDBR}" ] && [ -f "${DDBR}" ] && cp -v ${DDBR} ./usr/sbin/
+        [ -n "${DDBR}" ] && [ -f "${DDBR}" ] && cp -v ${DDBR} ./usr/sbin/
 
         # 我家云, 风扇调速脚本
-        if [ "$PLATFORM" == "rockchip" ] && [ "$SOC" == "rk3328" ] && [ "$BOARD" == "l1pro" ] && [ -f "$PWM_FAN" ];then
+        if [ "$PLATFORM" == "rockchip" ] && [ "$SOC" == "rk3328" ] && [ "$BOARD" == "l1pro" ] && [ -f "$PWM_FAN" ]; then
             cp -v $PWM_FAN ./usr/bin
-            echo "pwm_fan" > ./etc/modules.d/pwm_fan
+            echo "pwm_fan" >./etc/modules.d/pwm_fan
             sed -e "/exit/i\/usr/bin/pwm-fan.pl &" -i etc/rc.local
         fi
 
-        [ -n "$BAL_ETH_IRQ" ] && [ -f $BAL_ETH_IRQ ] && cp -v $BAL_ETH_IRQ ./usr/sbin && chmod 755 ./usr/sbin/balethirq.pl && \
-              sed -e "/exit/i\/usr/sbin/balethirq.pl" -i etc/rc.local
+        [ -n "$BAL_ETH_IRQ" ] && [ -f $BAL_ETH_IRQ ] && cp -v $BAL_ETH_IRQ ./usr/sbin && chmod 755 ./usr/sbin/balethirq.pl &&
+            sed -e "/exit/i\/usr/sbin/balethirq.pl" -i etc/rc.local
 
         [ -n "$BAL_CONFIG" ] && [ -f $BAL_CONFIG ] && cp -v $BAL_CONFIG etc/
         [ -f "./etc/init.d/cpufreq" ] && [ -n "$CPUFREQ_INIT" ] && [ -f $CPUFREQ_INIT ] && cp -v $CPUFREQ_INIT etc/init.d/ && chmod 755 etc/init.d/cpufreq
         [ -n "$WIRELESS_CONFIG" ] && [ -f $WIRELESS_CONFIG ] && cp -v $WIRELESS_CONFIG etc/config/
         [ -n "$FIX_CPU_FREQ" ] && [ -f $FIX_CPU_FREQ ] && cp -v $FIX_CPU_FREQ ./usr/sbin && chmod 755 ./usr/sbin/fixcpufreq.pl
-        [ -n "$SYSFIXTIME_PATCH" ] && [ -f $SYSFIXTIME_PATCH ] && patch -p1 < $SYSFIXTIME_PATCH
-        [ -n "$FORCE_REBOOT" ] && [ -f $FORCE_REBOOT ] && cp -v $FORCE_REBOOT usr/sbin/ 
+        [ -n "$SYSFIXTIME_PATCH" ] && [ -f $SYSFIXTIME_PATCH ] && patch -p1 <$SYSFIXTIME_PATCH
+        [ -n "$FORCE_REBOOT" ] && [ -f $FORCE_REBOOT ] && cp -v $FORCE_REBOOT usr/sbin/
 
         [ -n "$GET_RANDOM_MAC" ] && [ -f ${GET_RANDOM_MAC} ] && cp -v ${GET_RANDOM_MAC} ./usr/bin/
         [ -n "$MAC_SCRIPT1" ] && [ -f $MAC_SCRIPT1 ] && cp -v $MAC_SCRIPT1 ./usr/bin/
         [ -n "$MAC_SCRIPT2" ] && [ -f $MAC_SCRIPT2 ] && cp -v $MAC_SCRIPT2 ./usr/bin/
         [ -n "$MAC_SCRIPT3" ] && [ -f $MAC_SCRIPT3 ] && cp -v $MAC_SCRIPT3 ./usr/bin/
 
-        [ -n "$CPUSTAT_SCRIPT" ] && [ -f $CPUSTAT_SCRIPT ] && cp -v $CPUSTAT_SCRIPT ./usr/bin/cpustat && chmod 755 ./usr/bin/cpustat  
+        [ -n "$CPUSTAT_SCRIPT" ] && [ -f $CPUSTAT_SCRIPT ] && cp -v $CPUSTAT_SCRIPT ./usr/bin/cpustat && chmod 755 ./usr/bin/cpustat
         [ -n "$GETCPU_SCRIPT" ] && [ -f $GETCPU_SCRIPT ] && cp -v $GETCPU_SCRIPT ./bin/
-        [ -n "$SYSINFO_SCRIPT" ] && [ -x ./bin/bash ] && [ -f "${SYSINFO_SCRIPT}" ] && cp -v "${SYSINFO_SCRIPT}" ./etc/profile.d/ && \
-             sed -e "s/\/bin\/ash/\/bin\/bash/" -i ./etc/passwd && sed -e "s/\/bin\/ash/\/bin\/bash/" -i ./usr/libexec/login.sh
+        [ -n "$SYSINFO_SCRIPT" ] && [ -x ./bin/bash ] && [ -f "${SYSINFO_SCRIPT}" ] && cp -v "${SYSINFO_SCRIPT}" ./etc/profile.d/ &&
+            sed -e "s/\/bin\/ash/\/bin\/bash/" -i ./etc/passwd && sed -e "s/\/bin\/ash/\/bin\/bash/" -i ./usr/libexec/login.sh
 
-        [ -f ./etc/sysupgrade.conf ] && \
-             cat >> ./etc/sysupgrade.conf <<EOF
+        [ -f ./etc/sysupgrade.conf ] &&
+            cat >>./etc/sysupgrade.conf <<EOF
 /root/.ssh/
 EOF
 
-        if [ -n "${P7ZIP}" ] && [ -f "$P7ZIP" ];then
-             rm -rf ./usr/lib/opkg/info/p7zip* ./usr/lib/p7zip ./usr/bin/7z
-	     cp -v "${P7ZIP}" ./usr/bin/7z && chmod 755 ./usr/bin/7z
+        if [ -n "${P7ZIP}" ] && [ -f "$P7ZIP" ]; then
+            rm -rf ./usr/lib/opkg/info/p7zip* ./usr/lib/p7zip ./usr/bin/7z
+            cp -v "${P7ZIP}" ./usr/bin/7z && chmod 755 ./usr/bin/7z
         fi
     )
     echo "==============================================================================="
@@ -1099,14 +1115,15 @@ function extract_glibc_programs() {
     echo -n "释放基于 glibc 的增补程序包 ... "
     (
         cd $TGT_ROOT
-        if [ -f "$SS_LIB" ];then
-            ( cd ./lib && tar xJf "$SS_LIB" )
-            ( [ -n "$JQ" ] && [ -f "$JQ" ] && [ ! -f "./usr/bin/jq" ] && cp ${JQ} ./usr/bin/jq )
-            [ -n "$SS_BIN" ] && [ -f "$SS_BIN" ] && \
-                 (   cd ./usr/bin 
-                     mkdir -p ss-bin-musl && mv -f ss-server ss-redir ss-local ss-tunnel ss-bin-musl/ 2>/dev/null
-                     tar xJf "$SS_BIN"
-                 )
+        if [ -f "$SS_LIB" ]; then
+            (cd ./lib && tar xJf "$SS_LIB")
+            ([ -n "$JQ" ] && [ -f "$JQ" ] && [ ! -f "./usr/bin/jq" ] && cp ${JQ} ./usr/bin/jq)
+            [ -n "$SS_BIN" ] && [ -f "$SS_BIN" ] &&
+                (
+                    cd ./usr/bin
+                    mkdir -p ss-bin-musl && mv -f ss-server ss-redir ss-local ss-tunnel ss-bin-musl/ 2>/dev/null
+                    tar xJf "$SS_BIN"
+                )
         fi
     )
     echo "完成"
@@ -1120,43 +1137,43 @@ function adjust_openssh_config() {
     (
         cd $TGT_ROOT
         sed -e 's/root::/root:$1$NA6OM0Li$99nh752vw4oe7A.gkm2xk1:/' -i ./etc/shadow
-        if [ -f "./etc/ssh/sshd_config" ];then
+        if [ -f "./etc/ssh/sshd_config" ]; then
             echo -n "配置 sshd_config, 允许 root 用户登录 ... "
             sed -e "s/#PermitRootLogin prohibit-password/PermitRootLogin yes/" -i ./etc/ssh/sshd_config 2>/dev/null
             sed -e "s/#PermitRootLogin no/PermitRootLogin yes/" -i ./etc/ssh/sshd_config 2>/dev/null
-	    echo "完成 "
-	    if [ "$SSH_CIPHERS" != "" ];then
+            echo "完成 "
+            if [ "$SSH_CIPHERS" != "" ]; then
                 echo -n "优化 ssh client ciphers ... "
-		echo "Host *" >> ./etc/ssh/ssh_config
-		echo "    Ciphers $SSH_CIPHERS" >> ./etc/ssh/ssh_config
-		echo "完成"
-	    fi
-	    if [ "$SSHD_CIPHERS" != "" ];then
+                echo "Host *" >>./etc/ssh/ssh_config
+                echo "    Ciphers $SSH_CIPHERS" >>./etc/ssh/ssh_config
+                echo "完成"
+            fi
+            if [ "$SSHD_CIPHERS" != "" ]; then
                 echo -n "优化 ssh server ciphers ... "
                 sed -e "/# Ciphers and keying/a\Ciphers $SSHD_CIPHERS" -i ./etc/ssh/sshd_config 2>/dev/null
-		echo "完成"
-	    fi
-	    echo "#HostkeyAlgorithms +ssh-rsa" >> ./etc/ssh/sshd_config
-	    echo "#PubkeyAcceptedAlgorithms +ssh-rsa" >> ./etc/ssh/sshd_config
-	    echo -n "配置 shadow, 刷新密码更新日期 ... "
+                echo "完成"
+            fi
+            echo "#HostkeyAlgorithms +ssh-rsa" >>./etc/ssh/sshd_config
+            echo "#PubkeyAcceptedAlgorithms +ssh-rsa" >>./etc/ssh/sshd_config
+            echo -n "配置 shadow, 刷新密码更新日期 ... "
             utc_secs=$(date +%s)
-            days=$(( utc_secs / 86400 ))
+            days=$((utc_secs / 86400))
             sed -e "s/:0:0:99999:7:::/:${days}:0:99999:7:::/" -i ./etc/shadow
-	    echo "完成"
+            echo "完成"
             echo -n "检查sshd用户和组 ... "
-	    if ! grep "sshd:x:22:sshd" ./etc/group >/dev/null;then
-                 echo "sshd_x:22:sshd" >> ./etc/group
+            if ! grep "sshd:x:22:sshd" ./etc/group >/dev/null; then
+                echo "sshd_x:22:sshd" >>./etc/group
             fi
-	    if ! grep "sshd:x:22:22:sshd:" ./etc/passwd >/dev/null;then
-                 echo "sshd:x:22:22:sshd:/var/run/sshd:/bin/false" >> ./etc/passwd
+            if ! grep "sshd:x:22:22:sshd:" ./etc/passwd >/dev/null; then
+                echo "sshd:x:22:22:sshd:/var/run/sshd:/bin/false" >>./etc/passwd
             fi
-	    if ! grep "sshd:x:" ./etc/shadow >/dev/null;then
-                 echo "sshd:x:0:0:99999:7:::" >> ./etc/shadow
+            if ! grep "sshd:x:" ./etc/shadow >/dev/null; then
+                echo "sshd:x:0:0:99999:7:::" >>./etc/shadow
             fi
-	    echo "完成"
-	    
-	    echo -n "添加防火墙规则，丢弃目标为 WAN 区域, 端口为 22/TCP 的报文 ... "
-	    cat >> ./etc/config/firewall <<EOF
+            echo "完成"
+
+            echo -n "添加防火墙规则，丢弃目标为 WAN 区域, 端口为 22/TCP 的报文 ... "
+            cat >>./etc/config/firewall <<EOF
 
 config rule
         option name 'drop-wan-ssh'
@@ -1180,30 +1197,30 @@ EOF
 function adjust_samba_config() {
     echo "调整 samba server 配置 ..."
     (
-         # for cifsd
-         if [ -f ./etc/init.d/cifsd ];then
-             echo -n "发现 cifsd, 禁用 samba4. "        
-             rm -f ./etc/rc.d/S98samba4
-         fi
-          # for smbd
-         if [ -f ./etc/init.d/smbd ];then
-             echo -n "发现 smbd, 禁用 samba4. "        
-             rm -f ./etc/rc.d/S98samba4
-         fi                
-         # for ksmbd
-         if [ -f ./etc/init.d/ksmbd ];then
-             echo -n "发现 ksmbd, 禁用 samba4. "        
-             rm -f ./etc/rc.d/S98samba4
-             sed -e 's/modprobe ksmbd/sleep 1 \&\& modprobe ksmbd/' -i ./etc/init.d/ksmbd
-         fi
-         # for samba4 enable smbv1 protocol
-         if [ -f ./etc/config/samba4 ];then
-             echo "发现 samba4, 将启用 smbv1 协议. "        
-             sed -e 's/services/nas/g' -i ./usr/lib/lua/luci/controller/samba4.lua
-	     sed -e 's/services/nas/g' -i ./usr/share/luci/menu.d/luci-app-samba4.json
+        # for cifsd
+        if [ -f ./etc/init.d/cifsd ]; then
+            echo -n "发现 cifsd, 禁用 samba4. "
+            rm -f ./etc/rc.d/S98samba4
+        fi
+        # for smbd
+        if [ -f ./etc/init.d/smbd ]; then
+            echo -n "发现 smbd, 禁用 samba4. "
+            rm -f ./etc/rc.d/S98samba4
+        fi
+        # for ksmbd
+        if [ -f ./etc/init.d/ksmbd ]; then
+            echo -n "发现 ksmbd, 禁用 samba4. "
+            rm -f ./etc/rc.d/S98samba4
+            sed -e 's/modprobe ksmbd/sleep 1 \&\& modprobe ksmbd/' -i ./etc/init.d/ksmbd
+        fi
+        # for samba4 enable smbv1 protocol
+        if [ -f ./etc/config/samba4 ]; then
+            echo "发现 samba4, 将启用 smbv1 协议. "
+            sed -e 's/services/nas/g' -i ./usr/lib/lua/luci/controller/samba4.lua
+            sed -e 's/services/nas/g' -i ./usr/share/luci/menu.d/luci-app-samba4.json
 
-             [ -f ${SMB4_PATCH} ] && patch -p1 < ${SMB4_PATCH}
-         fi
+            [ -f ${SMB4_PATCH} ] && patch -p1 <${SMB4_PATCH}
+        fi
     )
     echo "完成"
     echo
@@ -1216,9 +1233,9 @@ function adjust_nfs_config() {
     echo "调整 nfs server 配置 ... "
     (
         # for nfs server
-        if [ -f ./etc/init.d/nfsd ];then
+        if [ -f ./etc/init.d/nfsd ]; then
             echo -n "已发现 nfsd 服务, 将调整其初始配置文件 ... "
-            cat > ./etc/exports <<EOF
+            cat >./etc/exports <<EOF
 # /etc/exports: the access control list for filesystems which may be exported
 #               to NFS clients.  See exports(5).
 #
@@ -1233,7 +1250,7 @@ function adjust_nfs_config() {
 /mnt *(ro,fsid=0,sync,nohide,no_subtree_check,insecure,no_root_squash)
 /mnt/${mount_point} *(rw,fsid=1,sync,no_subtree_check,no_root_squash)
 EOF
-             cat > ./etc/config/nfs <<EOF
+            cat >./etc/config/nfs <<EOF
 config share
         option clients '*'
         option enabled '1'
@@ -1261,11 +1278,11 @@ function adjust_openclash_config() {
     echo -n "调整 openclash 配置 ... "
     (
         cd $TGT_ROOT
-        if [ -d ./etc/openclash/core ];then
-            mkdir -p ./usr/share/openclash/core && \
-            cd ./etc/openclash && \
-            mv core ../../usr/share/openclash/ && \
-            ln -s ../../usr/share/openclash/core .
+        if [ -d ./etc/openclash/core ]; then
+            mkdir -p ./usr/share/openclash/core &&
+                cd ./etc/openclash &&
+                mv core ../../usr/share/openclash/ &&
+                ln -s ../../usr/share/openclash/core .
             echo "完成"
         else
             echo "未发现 openclash, 放弃调整"
@@ -1279,38 +1296,43 @@ function adjust_getty_config() {
     (
         cd $TGT_ROOT
         case $PLATFORM in
-            allwinner)   cat > ./etc/inittab <<EOF
+        allwinner)
+            cat >./etc/inittab <<EOF
 ::sysinit:/etc/init.d/rcS S boot
 ::shutdown:/etc/init.d/rcS K shutdown
 ttyS0::askfirst:/usr/libexec/login.sh
 EOF
-                         echo "完成"
-                         ;;
-             rockchip)   cat > ./etc/inittab <<EOF
+            echo "完成"
+            ;;
+        rockchip)
+            cat >./etc/inittab <<EOF
 ::sysinit:/etc/init.d/rcS S boot
 ::shutdown:/etc/init.d/rcS K shutdown
 tty1::askfirst:/usr/libexec/login.sh
 ttyS2::askfirst:/usr/libexec/login.sh
 EOF
-                         echo "完成"
-                         ;;
-             amlogic)    cat > ./etc/inittab <<EOF
+            echo "完成"
+            ;;
+        amlogic)
+            cat >./etc/inittab <<EOF
 ::sysinit:/etc/init.d/rcS S boot
 ::shutdown:/etc/init.d/rcS K shutdown
 ttyAML0::askfirst:/usr/libexec/login.sh
 tty0::askfirst:/usr/libexec/login.sh
 EOF
-                         echo "完成"
-                         ;;
-             qemu-aarch64)    cat > ./etc/inittab <<EOF
+            echo "完成"
+            ;;
+        qemu-aarch64)
+            cat >./etc/inittab <<EOF
 ::sysinit:/etc/init.d/rcS S boot
 ::shutdown:/etc/init.d/rcS K shutdown
 ttyAMA0::askfirst:/usr/libexec/login.sh
 EOF
-                         echo "完成"
-                         ;;
-                   *)    echo "Platform: ${PLATFORM} 不受支持！放弃调整"
-                         ;;
+            echo "完成"
+            ;;
+        *)
+            echo "Platform: ${PLATFORM} 不受支持！放弃调整"
+            ;;
         esac
     )
 }
@@ -1320,7 +1342,7 @@ function adjust_qbittorrent_config() {
     echo -n "调整 qbittorrent 配置 ... "
     (
         cd $TGT_ROOT
-        if [ -f "./etc/config/qbittorrent" ];then
+        if [ -f "./etc/config/qbittorrent" ]; then
             sed -e 's/\/opt/\/etc/' -i ./etc/config/qbittorrent
             echo "完成"
         else
@@ -1335,34 +1357,34 @@ function adjust_openssl_config() {
     (
         cd $TGT_ROOT
         #if [ -f $SSL_CNF_PATCH ];then
-             #if patch -p1 < $SSL_CNF_PATCH;then
-                 #echo "完成"
-             #else
-                 #echo "失败！请检查 $SSL_CNF_PATCH "
-             #fi 
+        #if patch -p1 < $SSL_CNF_PATCH;then
+        #echo "完成"
         #else
-            #echo "未发现 openssl 配置文件，放弃调整"
+        #echo "失败！请检查 $SSL_CNF_PATCH "
+        #fi
+        #else
+        #echo "未发现 openssl 配置文件，放弃调整"
         #fi
 
-	# devcrypto engine 会导致 openssh 无法工作，禁用 (建议编译时不要选择此engine)
-	if [ -f "./etc/ssl/engines.cnf.d/devcrypto.cnf" ];then
-             echo -n "禁用 devcrypto 引擎 ... "
-	     rm -f ./etc/ssl/engines.cnf.d/devcrypto.cnf
-	     # 清空 etc/config/openssl
-	     > ./etc/config/openssl
-             echo "完成"
+        # devcrypto engine 会导致 openssh 无法工作，禁用 (建议编译时不要选择此engine)
+        if [ -f "./etc/ssl/engines.cnf.d/devcrypto.cnf" ]; then
+            echo -n "禁用 devcrypto 引擎 ... "
+            rm -f ./etc/ssl/engines.cnf.d/devcrypto.cnf
+            # 清空 etc/config/openssl
+            >./etc/config/openssl
+            echo "完成"
         fi
 
-	# 如果发现 afalg engine
-	if [ -f "./usr/lib/engines-1.1/afalg.so" ] && [ -d "./etc/ssl/engines.cnf.d" ];then
-             echo -n "添加 afalg 引擎 ... "
-             grep "engine 'afalg'" "./etc/config/openssl" || cat >> ./etc/config/openssl <<EOF
+        # 如果发现 afalg engine
+        if [ -f "./usr/lib/engines-1.1/afalg.so" ] && [ -d "./etc/ssl/engines.cnf.d" ]; then
+            echo -n "添加 afalg 引擎 ... "
+            grep "engine 'afalg'" "./etc/config/openssl" || cat >>./etc/config/openssl <<EOF
 
 config engine 'afalg'
         option enabled '1'
 
 EOF
-             [ -f "./etc/ssl/engines.cnf.d/afalg.cnf" ] || cat > ./etc/ssl/engines.cnf.d/afalg.cnf <<EOF
+            [ -f "./etc/ssl/engines.cnf.d/afalg.cnf" ] || cat >./etc/ssl/engines.cnf.d/afalg.cnf <<EOF
 [afalg]
 # Leave this alone and configure algorithms with CIPERS/DIGESTS below
 default_algorithms = ALL
@@ -1395,7 +1417,7 @@ default_algorithms = ALL
 # for example, does this, and you may not be able to login.
 #DIGESTS = NONE
 EOF
-             echo "完成"
+            echo "完成"
         fi
     )
     echo "调整完成"
@@ -1408,21 +1430,21 @@ function adjust_docker_config() {
     (
         cd $TGT_ROOT
         [ -n "$DOCKER_README" ] && [ -f ./www/DockerReadme.pdf ] && [ -f ${DOCKER_README} ] && cp -fv ${DOCKER_README} ./www/DockerReadme.pdf
-        if [ -f ./etc/init.d/dockerd ];then
+        if [ -f ./etc/init.d/dockerd ]; then
             echo "发现 dockerd 服务，正在调整 ... "
-            [ -n "$DOCKERD_PATCH" ] && [ -f "$DOCKERD_PATCH" ] && [ ! -f ./etc/init.d/dockerman ] && patch -p1 < $DOCKERD_PATCH
+            [ -n "$DOCKERD_PATCH" ] && [ -f "$DOCKERD_PATCH" ] && [ ! -f ./etc/init.d/dockerman ] && patch -p1 <$DOCKERD_PATCH
 
-            if [ -f "./etc/init.d/dockerman" ] ;then
-                cat >> ./etc/config/dockerd <<EOF
+            if [ -f "./etc/init.d/dockerman" ]; then
+                cat >>./etc/config/dockerd <<EOF
 
 config globals 'globals'
-        option alt_config_file '/etc/docker/daemon.json' 
+        option alt_config_file '/etc/docker/daemon.json'
 	option auto_start '1'
 EOF
-                sed -e '/uci -q set dockerd.globals.auto_start="0"/d' -i ./etc/uci-defaults/luci-app-dockerman 
+                sed -e '/uci -q set dockerd.globals.auto_start="0"/d' -i ./etc/uci-defaults/luci-app-dockerman
             fi
 
-	    # 由first_run.sh负责重新开启dockerd服务
+            # 由first_run.sh负责重新开启dockerd服务
             echo "默认关闭 dockerd 服务 ... "
             rm -f ./etc/rc.d/S??dockerd ./etc/rc.d/S??dockerman
             echo "完成"
@@ -1436,12 +1458,12 @@ EOF
 # mosdns 配置调整
 function adjust_mosdns_config() {
     (
-    	if [ -f ./etc/config/mosdns ];then
+        if [ -f ./etc/config/mosdns ]; then
             echo -n "发现mosdns配置，正在调整 ... "
-	    sed -e "s/option enabled '1'/option enabled '0'/" -i ./etc/config/mosdns
-	    sed -e "s/option redirect '1'/option redirect '0'/" -i ./etc/config/mosdns
-	    sed -e "s/option autoconf '1'/option autoconf '0'/" -i ./etc/config/mosdns
-	    echo "完成"
+            sed -e "s/option enabled '1'/option enabled '0'/" -i ./etc/config/mosdns
+            sed -e "s/option redirect '1'/option redirect '0'/" -i ./etc/config/mosdns
+            sed -e "s/option autoconf '1'/option autoconf '0'/" -i ./etc/config/mosdns
+            echo "完成"
         fi
     )
 }
@@ -1450,14 +1472,14 @@ function adjust_mosdns_config() {
 function use_xrayplug_replace_v2rayplug() {
     (
         cd $TGT_ROOT
-        if [ -f usr/bin/xray ] && [ ! -f usr/bin/v2ray ];then
+        if [ -f usr/bin/xray ] && [ ! -f usr/bin/v2ray ]; then
             echo -n "用 xray 代替 v2ray ... "
             cd usr/bin && rm -f v2ray && ln -s xray v2ray
             echo "完成"
         fi
 
         cd $TGT_ROOT
-        if [ -f usr/bin/xray-plugin ] && [ ! -f usr/bin/v2ray-plugin ];then
+        if [ -f usr/bin/xray-plugin ] && [ ! -f usr/bin/v2ray-plugin ]; then
             echo -n "用 xray-plugin 代替 v2ray-plugin ... "
             cd usr/bin && rm -f v2ray-plugin && ln -s xray-plugin v2ray-plugin
             echo "完成"
@@ -1469,19 +1491,19 @@ function use_xrayplug_replace_v2rayplug() {
 function config_first_run() {
     echo "创建 [初次使用] 应用环境 ... "
     (
-         cd $TGT_ROOT
-         # First run, 第一次启动时自动创建新分区及格式化
-         if [ -n "$FIRSTRUN_SCRIPT" ] && [ -f "$FIRSTRUN_SCRIPT" ];then
-              cp -v "$FIRSTRUN_SCRIPT" ./etc/first_run.sh && \
-                  sed -e "s/MYSELF=\$0/MYSELF=\"\/etc\/first_run.sh\"/" -i ./etc/first_run.sh && \
-                  chmod 755 ./etc/first_run.sh
-              cp -v "./etc/rc.local" "./etc/rc.local.orig"
-              echo -e "${SKIP_MB}\t${BOOT_MB}\t${ROOTFS_MB}" > ./etc/part_size
-              sed -e "/exit/i\/etc/first_run.sh >/root/first_run.log 2>&1" -i etc/rc.local
-              echo "完成"
-          else
-              echo "未发现相关依赖，跳过配置"
-          fi
+        cd $TGT_ROOT
+        # First run, 第一次启动时自动创建新分区及格式化
+        if [ -n "$FIRSTRUN_SCRIPT" ] && [ -f "$FIRSTRUN_SCRIPT" ]; then
+            cp -v "$FIRSTRUN_SCRIPT" ./etc/first_run.sh &&
+                sed -e "s/MYSELF=\$0/MYSELF=\"\/etc\/first_run.sh\"/" -i ./etc/first_run.sh &&
+                chmod 755 ./etc/first_run.sh
+            cp -v "./etc/rc.local" "./etc/rc.local.orig"
+            echo -e "${SKIP_MB}\t${BOOT_MB}\t${ROOTFS_MB}" >./etc/part_size
+            sed -e "/exit/i\/etc/first_run.sh >/root/first_run.log 2>&1" -i etc/rc.local
+            echo "完成"
+        else
+            echo "未发现相关依赖，跳过配置"
+        fi
 
     )
     echo
@@ -1494,113 +1516,117 @@ function adjust_kernel_env() {
     (
         cd $TGT_ROOT
         local ps="${PLATFORM}_${SOC}"
-        if [ -f etc/config/cpufreq ];then
+        if [ -f etc/config/cpufreq ]; then
             echo "设置 schedutil 为默认调度器"
             sed -e "s/ondemand/schedutil/" -i etc/config/cpufreq
         fi
 
-        if [ -n "$SYSCTL_CUSTOM_CONF" ] && [ -f ${SYSCTL_CUSTOM_CONF} ];then
+        if [ -n "$SYSCTL_CUSTOM_CONF" ] && [ -f ${SYSCTL_CUSTOM_CONF} ]; then
             echo "启用自定义的内核优化参数 ... "
             cp -v ${SYSCTL_CUSTOM_CONF} ./etc/sysctl.d/
         fi
 
-        if [ -n "${KMOD_BLACKLIST}" ] && [ -f "${KMOD_BLACKLIST}" ];then
+        if [ -n "${KMOD_BLACKLIST}" ] && [ -f "${KMOD_BLACKLIST}" ]; then
             echo -n "禁用黑名单中的内核模块 ... "
             [ -d ./etc/modules.d.remove ] || mkdir -p ./etc/modules.d.remove
             local mod_blacklist=$(cat ${KMOD_BLACKLIST})
-            for mod in $mod_blacklist ;do
-                 mv -f ./etc/modules.d/${mod} ./etc/modules.d.remove/ 2>/dev/null
+            for mod in $mod_blacklist; do
+                mv -f ./etc/modules.d/${mod} ./etc/modules.d.remove/ 2>/dev/null
             done
             echo "完成"
-        fi    
+        fi
 
-        case $ps in 
-            allwinner_h6|rockchip_rk3328) 
-                echo -n "当前机型并未内置 broadcom 无线模块, 禁用 brcmfmac 驱动 ... "
-                mv -f ./etc/modules.d/brcm* ./etc/modules.d.remove/ 2>/dev/null
-                echo "完成"
-                ;;
-            amlogic_*) 
-                if [ $K510 -eq 1 ];then
-                    # 高版本内核下，如果ENABLE_WIFI_K510 = 0 则禁用wifi
-                    if [ $ENABLE_WIFI_K510 -eq 0 ];then
-                         echo "禁用了 brcmfmac 内置无线网卡驱动, 如需开启, 请设置 ENABLE_WIFI_K510=1 并重新打包"
-                         mv -f ./etc/modules.d/brcm*  ./etc/modules.d.remove/ 2>/dev/null
-                    else
-                         echo "brcmfmac" > ./etc/modules.d/brcmfmac
-                         echo "brcmutil" > ./etc/modules.d/brcmutil
-                         echo "已启用 brcmfmac 驱动，如果机内有 broadcom 模块的话，就可以开启wifi功能" 
-                    fi
+        case $ps in
+        allwinner_h6 | rockchip_rk3328)
+            echo -n "当前机型并未内置 broadcom 无线模块, 禁用 brcmfmac 驱动 ... "
+            mv -f ./etc/modules.d/brcm* ./etc/modules.d.remove/ 2>/dev/null
+            echo "完成"
+            ;;
+        amlogic_*)
+            if [ $K510 -eq 1 ]; then
+                # 高版本内核下，如果ENABLE_WIFI_K510 = 0 则禁用wifi
+                if [ $ENABLE_WIFI_K510 -eq 0 ]; then
+                    echo "禁用了 brcmfmac 内置无线网卡驱动, 如需开启, 请设置 ENABLE_WIFI_K510=1 并重新打包"
+                    mv -f ./etc/modules.d/brcm* ./etc/modules.d.remove/ 2>/dev/null
                 else
-                    # 低版本内核下，如果ENABLE_WIFI_K504 = 0 则禁用wifi
-                    if [ $ENABLE_WIFI_K504 -eq 0 ];then
-                        echo "禁用了 brcmfmac 内置无线网卡驱动, 如需开启, 请设置 ENABLE_WIFI_K504=1 并重新打包"
-                        mv -f ./etc/modules.d/brcm*  ./etc/modules.d.remove/ 2>/dev/null
-                    else
-                        echo "brcmfmac" > ./etc/modules.d/brcmfmac
-                        echo "brcmutil" > ./etc/modules.d/brcmutil
-                        echo "已启用 brcmfmac 驱动，如果机内有 broadcom 模块的话，就可以开启wifi功能" 
-                    fi
+                    echo "brcmfmac" >./etc/modules.d/brcmfmac
+                    echo "brcmutil" >./etc/modules.d/brcmutil
+                    echo "已启用 brcmfmac 驱动，如果机内有 broadcom 模块的话，就可以开启wifi功能"
                 fi
-                ;;
-            *)  echo "跳过"
-                ;;
-        esac 
-             
+            else
+                # 低版本内核下，如果ENABLE_WIFI_K504 = 0 则禁用wifi
+                if [ $ENABLE_WIFI_K504 -eq 0 ]; then
+                    echo "禁用了 brcmfmac 内置无线网卡驱动, 如需开启, 请设置 ENABLE_WIFI_K504=1 并重新打包"
+                    mv -f ./etc/modules.d/brcm* ./etc/modules.d.remove/ 2>/dev/null
+                else
+                    echo "brcmfmac" >./etc/modules.d/brcmfmac
+                    echo "brcmutil" >./etc/modules.d/brcmutil
+                    echo "已启用 brcmfmac 驱动，如果机内有 broadcom 模块的话，就可以开启wifi功能"
+                fi
+            fi
+            ;;
+        *)
+            echo "跳过"
+            ;;
+        esac
+
         echo -n "启用 USB AX88179 网卡驱动 ... "
-        [ -f ./etc/modules.d/usb-net-asix-ax88179 ] || echo "ax88179_178a" > ./etc/modules.d/usb-net-asix-ax88179
+        [ -f ./etc/modules.d/usb-net-asix-ax88179 ] || echo "ax88179_178a" >./etc/modules.d/usb-net-asix-ax88179
         echo "完成"
 
         echo -n "启用 USB RTL8152/8153/8156 网卡驱动 ... "
-        [ -f ./etc/modules.d/usb-net-rtl8152 ] || echo "r8152" > ./etc/modules.d/usb-net-rtl8152
+        [ -f ./etc/modules.d/usb-net-rtl8152 ] || echo "r8152" >./etc/modules.d/usb-net-rtl8152
         echo "完成"
 
         echo -n "启用 USB Realtek RTL8188EU 无线网卡驱动 ... "
-        echo "r8188eu" > ./etc/modules.d/rtl8188eu
+        echo "r8188eu" >./etc/modules.d/rtl8188eu
         echo "完成"
         echo "  *** 是否可用请自行测试"
 
         echo -n "启用 USB Ralink 无线网卡驱动  ... "
-        echo "rt2500usb" > ./etc/modules.d/rt2500-usb
-        echo "rt2800usb" > ./etc/modules.d/rt2800-usb
-        echo "rt2x00usb" > ./etc/modules.d/rt2x00-usb
+        echo "rt2500usb" >./etc/modules.d/rt2500-usb
+        echo "rt2800usb" >./etc/modules.d/rt2800-usb
+        echo "rt2x00usb" >./etc/modules.d/rt2x00-usb
         echo "完成"
         echo "  *** 如果有 Ralink rt2xxx/rt3xxx/rt5xxx 系列USB无线网卡的话，插上基本能用"
 
         echo -n "启用 USB Mediatek 无线网卡驱动  ... "
-        echo "mt7601u" > ./etc/modules.d/mt7601u
-        echo "mt7663u" > ./etc/modules.d/mt7663u
-        echo "mt76x0u" > ./etc/modules.d/mt76x0u
-        echo "mt76x2u" > ./etc/modules.d/mt76x2u
+        echo "mt7601u" >./etc/modules.d/mt7601u
+        echo "mt7663u" >./etc/modules.d/mt7663u
+        echo "mt76x0u" >./etc/modules.d/mt76x0u
+        echo "mt76x2u" >./etc/modules.d/mt76x2u
         echo "完成"
         echo "  *** 如果有 Mediatek mt7601u/mt7610u/mt7612u/mt7663u 系列USB无线网卡的话，插上基本能用"
 
         echo -n "启用看门狗驱动 ... "
-        case $PLATFORM in 
-            allwinner) echo "sunxi_wdt" > ./etc/modules.d/watchdog
-                       echo "完成"
-                       ;;
-             rockchip) echo "dw_wdt" > ./etc/modules.d/watchdog
-                       echo "完成"
-                       ;;
-              amlogic) echo meson_gxbb_wdt > ./etc/modules.d/watchdog
-                       echo "完成"
-                       ;;
-                    *) echo "跳过";;
-        esac 
+        case $PLATFORM in
+        allwinner)
+            echo "sunxi_wdt" >./etc/modules.d/watchdog
+            echo "完成"
+            ;;
+        rockchip)
+            echo "dw_wdt" >./etc/modules.d/watchdog
+            echo "完成"
+            ;;
+        amlogic)
+            echo meson_gxbb_wdt >./etc/modules.d/watchdog
+            echo "完成"
+            ;;
+        *) echo "跳过" ;;
+        esac
 
-        if [ -n "${SND_MOD}" ] && [ -f ./etc/config/shairport-sync ] && [ -f ${SND_MOD} ];then
+        if [ -n "${SND_MOD}" ] && [ -f ./etc/config/shairport-sync ] && [ -f ${SND_MOD} ]; then
             echo -n "启用声卡驱动 ... "
             cp ${SND_MOD} ./etc/modules.d/
             echo "完成"
         fi
 
-        if [ "$PLATFORM" == "amlogic" ];then
+        if [ "$PLATFORM" == "amlogic" ]; then
             echo -n "启用 GPU 驱动 ... "
-            echo "panfrost" > ./etc/modules.d/panfrost
+            echo "panfrost" >./etc/modules.d/panfrost
             echo "完成"
             echo -n "启用 PWM 驱动 ... "
-            echo "pwm_meson" > ./etc/modules.d/pwm_meson
+            echo "pwm_meson" >./etc/modules.d/pwm_meson
             echo "完成"
         fi
     )
@@ -1613,7 +1639,7 @@ function adjust_kernel_env() {
 function copy_uboot_to_fs() {
     (
         cd $TGT_ROOT
-        if [ "$BOARD" == "vplus" ] && [ -n "${UBOOT_BIN}" ] && [ -f ${UBOOT_BIN} ];then
+        if [ "$BOARD" == "vplus" ] && [ -n "${UBOOT_BIN}" ] && [ -f ${UBOOT_BIN} ]; then
             echo "检测到 vplus 机型，正在把 u-boot 相关文件写入到 /lib/u-boot目录中备用 ... "
             mkdir -p ./lib/u-boot
             cp -v ${UBOOT_BIN} ./lib/u-boot/
@@ -1621,7 +1647,7 @@ function copy_uboot_to_fs() {
             echo "完成"
         fi
 
-        if [ "$PLATFORM" == "amlogic" ] && [ -n "$FIP_HOME" ] && [ -d "${FIP_HOME}" ];then
+        if [ "$PLATFORM" == "amlogic" ] && [ -n "$FIP_HOME" ] && [ -d "${FIP_HOME}" ]; then
             echo "检测到 amlogic 平台，正在把主线 u-boot 相关文件写入到 /lib/u-boot 目录中备用 ... "
             mkdir -p ./lib/u-boot
             cp -v "${FIP_HOME}"/../*.sh lib/u-boot/
@@ -1629,7 +1655,7 @@ function copy_uboot_to_fs() {
             echo "完成"
         fi
 
-        if [ "$PLATFORM" == "amlogic" ] && [ -n "$BTLD_BIN" ] && [ -f "${BTLD_BIN}" ];then
+        if [ "$PLATFORM" == "amlogic" ] && [ -n "$BTLD_BIN" ] && [ -f "${BTLD_BIN}" ]; then
             echo "检测到 amlogic 平台，正在把安卓 u-boot 相关文件写入到 /lib/u-boot 目录中备用 ... "
             mkdir -p ./lib/u-boot
             cp -v "$BTLD_BIN" lib/u-boot/
@@ -1642,7 +1668,7 @@ function copy_uboot_to_fs() {
 # 写入 u-boot 到磁盘镜像
 function write_uboot_to_disk() {
     (
-        if [ "$PLATFORM" == "allwinner" ] && [ -n "$UBOOT_BIN" ] && [ -f "$UBOOT_BIN" ];then
+        if [ "$PLATFORM" == "allwinner" ] && [ -n "$UBOOT_BIN" ] && [ -f "$UBOOT_BIN" ]; then
             echo "写入 bootloader ..."
 
             echo "dd if=${UBOOT_BIN} of=${TGT_DEV} conv=fsync,notrunc bs=1024 seek=8"
@@ -1653,7 +1679,7 @@ function write_uboot_to_disk() {
             echo "完成"
         fi
 
-        if [ "$PLATFORM" == "rockchip" ] && [ -n "$BOOTLOADER_IMG" ] && [ -f "$BOOTLOADER_IMG" ];then
+        if [ "$PLATFORM" == "rockchip" ] && [ -n "$BOOTLOADER_IMG" ] && [ -f "$BOOTLOADER_IMG" ]; then
             echo "写入 bootloader ..."
             echo "dd if=${BOOTLOADER_IMG} of=${TGT_DEV} conv=fsync,notrunc bs=1 count=442"
             echo "dd if=${BOOTLOADER_IMG} of=${TGT_DEV} conv=fsync,notrunc bs=512 skip=1 seek=1"
@@ -1665,13 +1691,13 @@ function write_uboot_to_disk() {
             echo "完成"
         fi
 
-        if [ "$PLATFORM" == "amlogic" ] && [ -n "$UBOOT_WITH_FIP" ] && [ -f "$UBOOT_WITH_FIP" ];then
+        if [ "$PLATFORM" == "amlogic" ] && [ -n "$UBOOT_WITH_FIP" ] && [ -f "$UBOOT_WITH_FIP" ]; then
             echo "写入 bootloader ..."
             echo "dd if=${UBOOT_WITH_FIP}  of=${TGT_DEV} conv=fsync,notrunc bs=512 skip=1 seek=1"
             echo "dd if=${UBOOT_WITH_FIP}  of=${TGT_DEV} conv=fsync,notrunc bs=1 count=444"
 
-            dd if=${UBOOT_WITH_FIP}  of=${TGT_DEV} conv=fsync,notrunc bs=512 skip=1 seek=1
-            dd if=${UBOOT_WITH_FIP}  of=${TGT_DEV} conv=fsync,notrunc bs=1 count=444
+            dd if=${UBOOT_WITH_FIP} of=${TGT_DEV} conv=fsync,notrunc bs=512 skip=1 seek=1
+            dd if=${UBOOT_WITH_FIP} of=${TGT_DEV} conv=fsync,notrunc bs=1 count=444
 
             sync
             echo "完成"
@@ -1690,9 +1716,9 @@ function create_snapshot() {
     (
         cd $TGT_ROOT
         echo "创建初始快照: /etc -> /.snapshots/${snapshot_name}"
-        mkdir -p .snapshots && \
-        btrfs subvolume snapshot -r etc .snapshots/${snapshot_name}
-	sync
+        mkdir -p .snapshots &&
+            btrfs subvolume snapshot -r etc .snapshots/${snapshot_name}
+        sync
         echo "完成"
         echo
     )
@@ -1709,26 +1735,26 @@ function clean_work_env() {
 
 # 添加自定义的uci_defaults项
 function append_custom_uci_defaults_command {
-    if [ ! -d "$TGT_ROOT/etc/uci-defaults" ];then
+    if [ ! -d "$TGT_ROOT/etc/uci-defaults" ]; then
         return
     fi
     local cmd
-    while :;do
-	cmd=$1
-	if [ "$cmd" == "" ];then
+    while :; do
+        cmd=$1
+        if [ "$cmd" == "" ]; then
             break
-	fi
-	( cd $TGT_ROOT/etc/uci-defaults
-	  if [ ! -f zzz_custom_settings ];then
-              echo -e "#!/bin/sh\n" > zzz_custom_settings
-              chmod 755 zzz_custom_settings
-          fi
-	  echo -e "${cmd}\n" >> zzz_custom_settings
-	)
-	shift
+        fi
+        (
+            cd $TGT_ROOT/etc/uci-defaults
+            if [ ! -f zzz_custom_settings ]; then
+                echo -e "#!/bin/sh\n" >zzz_custom_settings
+                chmod 755 zzz_custom_settings
+            fi
+            echo -e "${cmd}\n" >>zzz_custom_settings
+        )
+        shift
     done
     echo "zzz_custom_settings: ======"
     cat "$TGT_ROOT/etc/uci-defaults/zzz_custom_settings"
     echo "==========================="
-
 }

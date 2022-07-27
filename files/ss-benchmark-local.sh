@@ -16,29 +16,29 @@ function gen_random_port() {
     local port
     local randomdev
     local randomdev=/dev/urandom
-    while :;do
-	port=$(dd if=${randomdev} bs=1 count=2 2>/dev/null | hexdump -d | head -n1 | awk '{printf("%d\n",$2)}')
-	if [ $port -le 1024 ];then
-  	    continue
-	fi
+    while :; do
+        port=$(dd if=${randomdev} bs=1 count=2 2>/dev/null | hexdump -d | head -n1 | awk '{printf("%d\n",$2)}')
+        if [ $port -le 1024 ]; then
+            continue
+        fi
         port_used=$(netstat -tnl | awk '{print $4}' | awk -F':' '$NF~/[0-9]+/ {print $NF}')
-	if [ "$port_used" == "" ];then
-	    break
-	else
-	    used=0
-            for p in $port_used;do
-                 if [ $p -eq $port ];then
-		     used=1
-		     break
-		 fi
-	    done
-	    if [ $used -eq 1 ];then
-	        continue
-	    fi
-	fi
+        if [ "$port_used" == "" ]; then
+            break
+        else
+            used=0
+            for p in $port_used; do
+                if [ $p -eq $port ]; then
+                    used=1
+                    break
+                fi
+            done
+            if [ $used -eq 1 ]; then
+                continue
+            fi
+        fi
         break
-     done
-     echo "$port"	
+    done
+    echo "$port"
 }
 
 function create_test_json() {
@@ -46,7 +46,7 @@ function create_test_json() {
     local method=$2
     local server_port=$3
     local local_port=$4
-    cat > $jsonfile <<EOF
+    cat >$jsonfile <<EOF
 {
     "server" : "127.0.0.1",
     "mode" : "tcp_only",
@@ -70,12 +70,12 @@ cat <<EOF
     ----------------------------------------------------------------------------------
       1. ${BIN_HOME}/ss-server + ${BIN_HOME}/ss-local (glibc version)
 EOF
-if [ -f ${BIN_HOME}/ss-bin-musl/ss-server ] && [ -f ${BIN_HOME}/ss-bin-musl/ss-local ];then
+if [ -f ${BIN_HOME}/ss-bin-musl/ss-server ] && [ -f ${BIN_HOME}/ss-bin-musl/ss-local ]; then
     cat <<EOF
       2. ${BIN_HOME}/ss-bin-musl/ss-server + ${BIN_HOME}/ss-bin-musl/ss-local (musl version)
 EOF
 fi
-if [ -f ${BIN_HOME}/ssserver ] && [ -f ${BIN_HOME}/sslocal ];then
+if [ -f ${BIN_HOME}/ssserver ] && [ -f ${BIN_HOME}/sslocal ]; then
     cat <<EOF
       3. ${BIN_HOME}/ssserver + ${BIN_HOME}/sslocal (rust version)
     ----------------------------------------------------------------------------------
@@ -83,21 +83,22 @@ EOF
 fi
 echo -ne "     [1]\b\b"
 
-    read select
-    case $select in 
-	    2) SS_SERVER=${BIN_HOME}/ss-bin-musl/ss-server
-	       SS_LOCAL=${BIN_HOME}/ss-bin-musl/ss-local
-	       SS_VERSION="ss-libev (musl)"
-	       ;;
-	    3) SS_SERVER=${BIN_HOME}/ssserver
-	       SS_LOCAL=${BIN_HOME}/sslocal
-	       SS_VERSION="ss-rust"
-	       ;;
-    esac
+read select
+case $select in
+2)
+    SS_SERVER=${BIN_HOME}/ss-bin-musl/ss-server
+    SS_LOCAL=${BIN_HOME}/ss-bin-musl/ss-local
+    SS_VERSION="ss-libev (musl)"
+    ;;
+3)
+    SS_SERVER=${BIN_HOME}/ssserver
+    SS_LOCAL=${BIN_HOME}/sslocal
+    SS_VERSION="ss-rust"
+    ;;
+esac
 
-
-if [ "${select}" == "3" ];then
-	methods="aes-128-gcm aes-256-gcm chacha20-ietf-poly1305"
+if [ "${select}" == "3" ]; then
+    methods="aes-128-gcm aes-256-gcm chacha20-ietf-poly1305"
 else
     cat <<EOF
     ----------------------------------------------------------------------------------
@@ -105,11 +106,12 @@ else
       2. 完整版测试 (15 种算法)
     ----------------------------------------------------------------------------------
 EOF
-echo -ne "     [1]\b\b"
+    echo -ne "     [1]\b\b"
 
     read select
-    case $select in 
-	    2) methods="
+    case $select in
+    2)
+        methods="
 		    aes-128-ctr
 		    aes-192-ctr
 		    aes-256-ctr
@@ -123,15 +125,16 @@ echo -ne "     [1]\b\b"
 		    chacha20
 		    chacha20-ietf
 		    chacha20-ietf-poly1305
-                    xchacha20-ietf-poly1305
+            xchacha20-ietf-poly1305
 		    rc4-md5"
-		;;
-	    *) methods="aes-128-gcm
+        ;;
+    *)
+        methods="aes-128-gcm
 		    aes-192-gcm
 		    aes-256-gcm
 		    chacha20-ietf-poly1305
 		    rc4-md5"
-		;;
+        ;;
     esac
 fi
 
@@ -153,18 +156,18 @@ echo "done"
 
 echo -n "Read from memory benchmark ... "
 { time dd if=/tmp/test/test.bin of=/dev/nul bs=1M count=$bin_size >/dev/null 2>&1; } 2>$mmtmp
-mm_time=$(cat $mmtmp && rm -f $mmtmp) 
+mm_time=$(cat $mmtmp && rm -f $mmtmp)
 mm_rspeed=$(echo $bin_size $mm_time | awk '{printf("%0.3fMB/s\n",$1/$2)}')
 echo "done"
 
 mount -o bind /tmp/test ${WWW_HOME}/test
-echo 
+echo
 
 retfile=$(mktemp)
 
 function on_trap_exit() {
     killall curl 2>/dev/null
-    while umount ${WWW_HOME}/test 2>/dev/null;do
+    while umount ${WWW_HOME}/test 2>/dev/null; do
         echo -n "umount ${WWW_HOME}/test ... "
     done
     echo "done"
@@ -177,12 +180,12 @@ trap on_trap_exit 2 3 15
 
 echo "Shadowsocks benchmark begin ... "
 echo "==============================================================================="
-for method in $methods;do
-    if [ "$method" == "#" ];then
-         printf "%-25s  %12s%12s\n" "--" "" "" >> $retfile
-	 continue
+for method in $methods; do
+    if [ "$method" == "#" ]; then
+        printf "%-25s  %12s%12s\n" "--" "" "" >>$retfile
+        continue
     fi
-    echo 
+    echo
     echo -e "-------------->>>>>>>>>>>>>  method: \033[33m$method\033[0m"
     echo "start ss-server ... "
     create_test_json "/tmp/ss_test.json" "${method}" $SERVER_PORT $LOCAL_PORT
@@ -198,19 +201,19 @@ for method in $methods;do
     echo -n "start curl download benchmark ... "
     curltmp=$(mktemp)
     timetmp=$(mktemp)
-    { time curl --socks5 127.0.0.1:${LOCAL_PORT} http://127.0.0.1/test/test.bin --output /dev/null 2>$curltmp;} 2>$timetmp
-    if [ $? -eq 0 ];then
-	echo "ok"
-	realtime=$(cat $timetmp)
-	echo "Downloading ${bin_size}MB of data took ${realtime} seconds"
-	echo "--------------------------------------------------------------------------------"
-	cat $curltmp | tr '\r' '\n'
-	echo "--------------------------------------------------------------------------------"
-	perf1=$(cat $curltmp | tr '\r' '\n' | tail -n1 | tr -d 'M' | awk '{printf("%0.1f\n",$7)}')
-	perf2=$(echo "$bin_size $realtime" | awk '{printf("%0.2f\n", $1/$2)}')
-        printf "%-25s->%12s%12s\n" "$method" "$perf1" "$perf2" >> $retfile
+    { time curl --socks5 127.0.0.1:${LOCAL_PORT} http://127.0.0.1/test/test.bin --output /dev/null 2>$curltmp; } 2>$timetmp
+    if [ $? -eq 0 ]; then
+        echo "ok"
+        realtime=$(cat $timetmp)
+        echo "Downloading ${bin_size}MB of data took ${realtime} seconds"
+        echo "--------------------------------------------------------------------------------"
+        cat $curltmp | tr '\r' '\n'
+        echo "--------------------------------------------------------------------------------"
+        perf1=$(cat $curltmp | tr '\r' '\n' | tail -n1 | tr -d 'M' | awk '{printf("%0.1f\n",$7)}')
+        perf2=$(echo "$bin_size $realtime" | awk '{printf("%0.2f\n", $1/$2)}')
+        printf "%-25s->%12s%12s\n" "$method" "$perf1" "$perf2" >>$retfile
     else
-	echo "failed!"
+        echo "failed!"
 
     fi
     rm -f $curltmp
@@ -224,7 +227,7 @@ mm_time=$(cat $mmtmp && rm -f $mmtmp)
 http_dspeed=$(echo $bin_size $mm_time | awk '{printf("%0.3fMB/s\n",$1/$2)}')
 echo "done"
 
-if netstat -tnl | awk '{print $4}' | awk -F':' '$NF~/[0-9]+/ {print $NF}' | grep "^443$" >/dev/null;then
+if netstat -tnl | awk '{print $4}' | awk -F':' '$NF~/[0-9]+/ {print $NF}' | grep "^443$" >/dev/null; then
     echo -n "HTTPS direct download benchmark ... "
     { time curl --insecure https://127.0.0.1/test/test.bin --output /dev/null 2>/dev/null; } 2>$mmtmp
     mm_time=$(cat $mmtmp && rm -f $mmtmp)
@@ -236,7 +239,7 @@ echo "==========================================================================
 echo "Shadowsocks benchmark end"
 echo
 
-while umount ${WWW_HOME}/test 2>/dev/null;do
+while umount ${WWW_HOME}/test 2>/dev/null; do
     echo -n "umount ${WWW_HOME}/test ... "
 done
 echo "done"
@@ -245,7 +248,7 @@ rm -rf /tmp/test ${WWW_HOME}/test
 echo "done"
 echo
 echo
-echo -e "      \033[32m<<<  The benchmark result report  >>>\033[0m" 
+echo -e "      \033[32m<<<  The benchmark result report  >>>\033[0m"
 echo -e "Shadowsocks version: [\033[32m$SS_VERSION\033[0m]"
 echo "---------------------------------------------------"
 printf "\033[33m%-25s  %12s%12s\033[0m\n" "Method name" "Curl rpt" "size/time"
@@ -261,10 +264,10 @@ echo -e "Read from memory: [\033[32m$mm_rspeed\033[0m]"
 [ "$https_dspeed" != "" ] && echo -e "HTTPS direct download:: [\033[32m$https_dspeed\033[0m]"
 model="unknown"
 arch=$(uname -m)
-if [ "$arch" == "aarch64" ];then
-    model=$(cat /proc/device-tree/model |tr -d '\000')
-elif [ "$arch" == "x86_64" ];then
-    model=$(cat /proc/cpuinfo | grep 'model name' | uniq | awk -F':' '{print $2}') 
+if [ "$arch" == "aarch64" ]; then
+    model=$(cat /proc/device-tree/model | tr -d '\000')
+elif [ "$arch" == "x86_64" ]; then
+    model=$(cat /proc/cpuinfo | grep 'model name' | uniq | awk -F':' '{print $2}')
 fi
 echo -e "Model: [\033[32m$model\033[0m]"
 kernel=$(uname -r)

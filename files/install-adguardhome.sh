@@ -1,4 +1,5 @@
 #!/bin/sh
+
 docker pull adguard/adguardhome:arm64-latest
 mkdir -p /mnt/mmcblk1p3/adguardhome/workdir /mnt/mmcblk1p3/adguardhome/confdir
 docker run --name adguardhome \

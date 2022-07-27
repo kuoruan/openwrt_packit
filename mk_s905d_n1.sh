@@ -5,7 +5,7 @@ source make.env
 source public_funcs
 init_work_env
 
-# 盒子型号识别参数 
+# 盒子型号识别参数
 PLATFORM=amlogic
 SOC=s905d
 BOARD=n1
@@ -151,7 +151,7 @@ extract_amlogic_boot_files
 echo "修改引导分区相关配置 ... "
 cd $TGT_BOOT
 rm -f uEnv.ini
-cat > uEnv.txt <<EOF
+cat >uEnv.txt <<EOF
 LINUX=/zImage
 INITRD=/uInitrd
 
@@ -193,7 +193,7 @@ patch_admin_status_index_html
 adjust_kernel_env
 copy_uboot_to_fs
 write_release_info
-write_banner 
+write_banner
 config_first_run
 create_snapshot "etc-000"
 write_uboot_to_disk

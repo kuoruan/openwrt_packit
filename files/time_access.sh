@@ -51,7 +51,7 @@ ip_get_ping_status() {
 	local ret=$(ping -c 3 ${ip} | tail -n1 | awk '{print $7}')
 	if [ "$ret" == "100%" ];then
 		echo "offline"
-	else  
+	else
 		echo "online"
 	fi
 }
@@ -94,7 +94,7 @@ execute_rule() {
 
 	local last_rule=$(echo $last_msg | awk -F '_' {'print $2'})
 	local last_start_sec=$(echo $last_msg | awk -F '_' '{print $3}')
-  
+
 	if [ "$last_rule" == "allow" ];then
 		# 如果当前是允许上网的
 		local online_secs=$(( cur_sec - last_start_sec ))
@@ -151,7 +151,7 @@ EOF
 	fi
 
 	rm -f $log_file $control_file
-	touch $log_file $control_file 
+	touch $log_file $control_file
 	#放行所有ip
 	for rule in $RULES;do
 		ip_or_mac=$(echo $rule | awk -F '|' '{print $1}')
